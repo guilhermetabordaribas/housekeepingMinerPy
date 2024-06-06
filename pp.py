@@ -165,7 +165,7 @@ def transform_exprs_RNAseq(X, trns_method:str = 'MRN' ):
     elif trns_method == 'TMM':
         return tmm(X.T).T
     else:
-        warnings.warn("Please, the norm_method must be 'MRN' or 'TMM'. Current norm_method = "" + str(trns_method))
+        warnings.warn("Please, the norm_method must be 'MRN' or 'TMM'. Current norm_method = " + str(trns_method))
 
 def transform_exprs_Microarray(X, trns_method:str = 'quantile' ):
     """

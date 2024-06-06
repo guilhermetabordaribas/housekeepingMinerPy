@@ -1,3 +1,3 @@
-from hkgPy import pp, find
+from housekeepingMinerPy import pp, mining
 
-__all__ = ['pp', 'find']
+__all__ = ['pp', 'mining']

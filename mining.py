@@ -8,7 +8,7 @@ from sklearn.cluster import KMeans
 from sklearn.neighbors import NearestNeighbors
 from sknetwork.clustering import Louvain
 
-def exprs_cv(adata, layer:str = None, groups_col:str = None, return_mean_per_group:bool = True, return_std_per_group:bool = True, return_cv_per_group:bool = False):
+def exprs_cv(adata, layer:str = None, groups_col:str = None, return_mean_per_group:bool = False, return_std_per_group:bool = False, return_cv_per_group:bool = False):
     """
     Calculate the coefficient (cv) of variation of expression for each gene. To give the same weight for different groups, you can infrom groups_col.
     So a pooled cv will be calculated considering the same weight for each group.
@@ -72,7 +72,7 @@ def exprs_cv(adata, layer:str = None, groups_col:str = None, return_mean_per_gro
 
         return adata
 
-def stability_cv(adata, layer:str = None, groups_col:str = None, n_jobs:int = None):
+def stability_cv(adata, layer:str = None, groups_col:str = None, n_jobs:int = None, round_f:int = 3):
     """
     Calculate the average coefficient (cv) of variation of stability for each pair of genes. To give the same weight for different groups, you can infrom groups_col.
     So a pooled stability cv will be calculated considering the same weight for each group.
@@ -88,6 +88,8 @@ def stability_cv(adata, layer:str = None, groups_col:str = None, n_jobs:int = No
         If None, the calculation will not give the same weight for each group. The group with more samples will have greater weight. The name of column will be simple_cv instead pooled_cv.
     n_jobs: int
         The number of jobs to use for the computation. This is a argument for sklearn.metrics.pairwise_distances().
+    round_f: int
+        Normalize the pairise_distance values to avoid error on squareform.
 
     Returns
     -------
@@ -105,11 +107,11 @@ def stability_cv(adata, layer:str = None, groups_col:str = None, n_jobs:int = No
     aux = []
     i = 0
     for r in X_:
-        a = squareform( pairwise_distances( r.reshape(-1, 1) ).round(3) )
+        a = squareform( pairwise_distances( r.reshape(-1, 1), n_jobs=n_jobs ).round( round_f ) )
         aux.append(a)
         print(i, end=' ')
         i+=1
-
+        WRITE IT IN A TEMP FILE. 
     aux = pd.DataFrame(np.array(aux))
     aux.index = adata.obs.index
     aux.columns = [s[0]+','+s[1] for s in list(itertools.combinations(adata.var.index,2))]
