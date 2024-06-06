@@ -72,9 +72,9 @@ def exprs_cv(adata, layer:str = None, groups_col:str = None, return_mean_per_gro
 
         return adata
 
-def stability_cv(adata, layer:str = None, groups_col:str = None, return_mean_per_group:bool = True, return_std_per_group:bool = True, return_cv_per_group:bool = False):
+def stability_cv(adata, layer:str = None, groups_col:str = None, n_jobs:int = None):
     """
-    Calculate the mean of coefficient (cv) of variation of stability for each pair of genes. To give the same weight for different groups, you can infrom groups_col.
+    Calculate the average coefficient (cv) of variation of stability for each pair of genes. To give the same weight for different groups, you can infrom groups_col.
     So a pooled stability cv will be calculated considering the same weight for each group.
 
     Parameters
@@ -86,12 +86,8 @@ def stability_cv(adata, layer:str = None, groups_col:str = None, return_mean_per
     groups_col: string
         groups_col to perform the stratified calculation of cv. It must be a column at adata.obs annotations.
         If None, the calculation will not give the same weight for each group. The group with more samples will have greater weight. The name of column will be simple_cv instead pooled_cv.
-    return_mean_per_group: bool
-        If True, columns of mean calculation for each group will be stored in a adata.var column.
-    return_std_per_group: bool
-        If True, columns of standard deviation (std) calculation for each group will be stored in a adata.var column.
-    return_std_per_group: bool
-        If True, columns of cv calculation for each group will be stored in a adata.var column.
+    n_jobs: int
+        The number of jobs to use for the computation. This is a argument for sklearn.metrics.pairwise_distances().
 
     Returns
     -------
@@ -119,6 +115,7 @@ def stability_cv(adata, layer:str = None, groups_col:str = None, return_mean_per
     aux.columns = [s[0]+','+s[1] for s in list(itertools.combinations(adata.var.index,2))]
 
     if groups_col == None:
+        # Calculate average CV for each pair of pairwise_distances distance
         aux = pd.DataFrame(aux.std(axis=0) / aux.mean(axis=0)).reset_index()
         aux[['G1','G2']] = aux['index'].str.split(',', expand=True)
 
@@ -131,23 +128,29 @@ def stability_cv(adata, layer:str = None, groups_col:str = None, return_mean_per
         return adata
 
     else:
-        # aux[groups_col] = adata.obs[groups_col].values
+        aux_std = pd.DataFrame(aux.columns, columns=['gene']).set_index('gene')
+        aux_mean = pd.DataFrame(aux.columns, columns=['gene']).set_index('gene')
+        # Calculate std and average for each pair in each group
         for gc in adata.obs[groups_col].unique():
             idx = adata.obs[adata.obs[groups_col]==gc,:].index
 
-            adata.var['stability_mean_'+str(gc)] = np.mean(aux.loc[idx,:].values, axis=0)
-            adata.var['stability_std_'+str(gc)] = np.std(aux.loc[idx,:].values, axis=0)
-            if return_cv_per_group:
-                adata.var['stability_cv_'+str(gc)] = adata.var['stability_std_'+str(gc)].values / adata.var['stability_mean_'+str(gc)].values
+            aux_std['stability_std_'+str(gc)] = aux.loc[idx,:].std(axis=0)
+            aux_mean['stability_std_'+str(gc)] = aux.loc[idx,:].mean(axis=0)
 
-        adata.var['pool_stability_mean'] = adata.var[['stability_mean_'+str(c) for c in adata.obs[groups_col].unique()]].mean(axis=1)
-        adata.var['pool_stability_std'] = np.sqrt( np.square(adata.var[['stability_std_'+str(c) for c in adata.obs[groups_col].unique()]]).mean(axis=1) )
-        adata.var['pool_stability_cv'] = adata.var['pool_std'].values / adata.var['pool_mean'].values
+        # Calculate std pooled/combined std and mean given the same weight for all clusters
+        aux_std = pd.DataFrame(np.sqrt( np.square(aux_std[['stability_std_'+str(c) for c in adata.obs[groups_col].unique()]]).mean(axis=1) ))
+        aux_mean = pd.DataFrame(aux_mean[['stability_std_'+str(c) for c in adata.obs[groups_col].unique()]]).mean(axis=1)
+        aux = pd.concat([aux_std, aux_mean], axis=1)
+        del(aux_std)
+        del(aux_mean)
+        aux.columns = ['stability_std','stability_mean']
+        aux['stability_cv'] = aux['stability_std'] / aux['stability_mean']
+        aux = aux.reset_index()
+        aux[['G1','G2']] = aux['gene'].str.split(',', expand=True)
+        aux = pd.concat([aux[['G1','stability_cv']].set_index('G1'), aux[['G2','stability_cv']].set_index('G2')], axis=0).reset_index()
+        aux.columns = ['gene', 'stability_cv']
 
-        if not return_mean_per_group:
-            adata.var = adata.var.drop(['mean_'+str(c) for c in adata.obs[groups_col].unique()], axis=1)
-        if not return_std_per_group:
-            adata.var = adata.var.drop(['std_'+str(c) for c in adata.obs[groups_col].unique()], axis=1)
+        adata.var['pool_stability_cv'] = aux.groupby('gene').mean().loc[adata.var.index,:]
 
         return adata
 
