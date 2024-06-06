@@ -210,17 +210,66 @@ def sclustering_cv_stb(adata, cv_col:str = None, stb_col:str = None, scaler_obje
 
     return adata
 
-# def feat_selection_ga(adata, ):
-# intial = True
-#
-# if intial:
-#     X_o = df_cnt.iloc[:,:-1].values
-# else:
-#     X_o = df_cnt.iloc[:,:-1].loc[:,hkg_ts[np.where( solution )[0]]].values
-# y_o = lb.fit_transform(df_cnt.ar.values).flatten()
-#
-# print(X_o.shape)
-#
+
+def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitness_function:str = None):
+    if layer != None:
+        X_ = adata.layers[layer]
+    else:
+        X_ = adata.X
+
+    if fitness_function == 'minimize_groups_qty':
+        def fitness_func(ga_instance, solution, solution_idx):
+            clusterer = hdbscan.HDBSCAN().fit(X_[:, np.where( solution )[0]] )
+            labels = clusterer.labels_
+            fitness = 1 / np.unique(labels).shape[0]
+            return fitness
+    elif fitness_function == 'minimize_outliers':
+        def fitness_func(ga_instance, solution, solution_idx):
+            clusterer = hdbscan.HDBSCAN().fit(X_[:, np.where( solution )[0]] )
+            threshold = np.quantile(clusterer.outlier_scores_, q=.9)
+            inliers = np.where(clusterer.outlier_scores_ <= threshold)[0].shape[0]
+            fitness = inliers
+            return fitness
+
+    num_generations = 100
+    num_parents_mating = 2
+
+    sol_per_pop = 8
+    num_genes = len(bm)
+
+    init_range_low = 0
+    init_range_high = 2
+
+    parent_selection_type = "sss"
+    keep_parents = 1
+
+    crossover_type = "single_point"
+
+    mutation_type = "random"
+    mutation_percent_genes = 10
+
+    gene_type = int
+
+    ga_instance = pygad.GA(num_generations=num_generations,
+                           num_parents_mating=num_parents_mating,
+                           fitness_func=fitness_function,
+                           sol_per_pop=sol_per_pop,
+                           num_genes=num_genes,
+                           # init_range_low=init_range_low,
+                           # init_range_high=init_range_high,
+                           parent_selection_type=parent_selection_type,
+                           keep_parents=keep_parents,
+                           crossover_type=crossover_type,
+                           mutation_type=mutation_type,
+                           mutation_percent_genes=mutation_percent_genes,
+                           gene_type=gene_type,
+                           gene_space=[0, 1]
+                          )
+
+    ga_instance.run()
+    # solution, solution_fitness, solution_idx = ga_instance.best_solution()
+    return ga_instance.best_solution()
+
 # def fitness_func(ga_instance, solution, solution_idx):
 #     lb = LabelBinarizer()
 #     # X = df_cnt.iloc[:,:-1].values[:,np.where(solution)[0]]
