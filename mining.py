@@ -73,7 +73,7 @@ def exprs_cv(adata, layer:str = None, groups_col:str = None, return_mean_per_gro
 
         return adata
 
-def stability_cv(adata, layer:str = None, groups_col:str = None):
+def stability_cv(adata, layer:str = None, groups_col:str = None, return_stb_cv_per_group:bool = False):
     """
     Calculate the average coefficient (cv) of variation of stability for each pair of genes. To give the same weight for different groups, you can infrom groups_col.
     So a pooled stability cv will be calculated considering the same weight for each group.
@@ -105,42 +105,54 @@ def stability_cv(adata, layer:str = None, groups_col:str = None):
     df_mean_ = []
     df_std_ = []
     if groups_col == None:
-        mean_X_ = []
-        std_X_ = []
-        for i in range(X_.shape[1]):
-            mean_X_.extend(np.mean(X_[:,i:] - X_[:,i,None], axis=1)[0])
-            std_X_.extend(np.std(X_[:,i:] - X_[:,i,None], axis=1)[0])
-            cols_.extend([','.join(p) for p in itertools.product([adata.var.index[i]],adata.var[i:].index)])
-        df_mean_.append(mean_X_)
-        df_std_.append(std_X_)
+        pw_dist = pairwise_distances(X_[:,:].T)
+        adata.var['simple_stability_cv'] = pw_dist.std(axis=0) / pw_dist.mean(axis=0)
+        # mean_X_ = []
+        # std_X_ = []
+        # for i in range(X_.shape[1]):
+        #     mean_X_.extend(np.mean(X_[:,i:] - X_[:,i,None], axis=1)[0])
+        #     std_X_.extend(np.std(X_[:,i:] - X_[:,i,None], axis=1)[0])
+        #     cols_.extend([','.join(p) for p in itertools.product([adata.var.index[i]],adata.var[i:].index)])
+        # df_mean_.append(mean_X_)
+        # df_std_.append(std_X_)
     else:
         j = 0
         groups = adata.obs[groups_col].unique()
         print('Computing groups data:', end=' ')
-        for gc in groups:
-            print(j, end=' ')
+        for i,gc in enumerate(groups):
+            print(i, end=' ')
             idx = np.where(adata.obs[groups_col]==gc)
-            mean_X_ = []
-            std_X_ = []
-            for i in range(X_.shape[1]):
-                mean_X_.extend(np.mean(X_[idx,i:] - X_[idx,i,None], axis=1)[0])
-                std_X_.extend(np.std(X_[idx,i:] - X_[idx,i,None], axis=1)[0])
-                if j == 0:
-                    cols_.extend([','.join(p) for p in itertools.product([adata.var.index[i]],adata.var[i:].index)])
-            j+=1
-            df_mean_.append(mean_X_)
-            df_std_.append(std_X_)
+            pw_dist = pairwise_distances(X_[idx,:][0].T)
+            df_mean_.append( pw_dist.mean(axis=0) )
+            df_std_.append( pw_dist.std(axis=0) )
 
-    aux = pd.DataFrame(df_std_, columns=cols_, index=groups) / pd.DataFrame(df_mean_, columns=cols_, index=groups)
-    del(df_std_)
-    del(df_mean_)
-    aux = aux[[c for c in aux.columns if (len(set(c.split(',')))>1)]].abs()
-    aux = aux.mean(axis=0).reset_index()
-    aux.columns = ['gene', 'stability_cv']
-    aux[['G1','G2']] = aux['gene'].str.split(',', expand=True)
-    aux = pd.concat([aux[['G1','stability_cv']].set_index('G1'), aux[['G2','stability_cv']].set_index('G2')], axis=0).reset_index()
-    aux.columns = ['gene', 'stability_cv']
-    adata.var['pool_stability_cv'] = aux.groupby('gene').mean().loc[adata.var.index,:]
+        adata.var['pool_stability_cv'] = (np.array(df_std_) / np.array(df_mean_)).mean(axis=0)
+
+        if return_stb_cv_per_group:
+            aux = pd.DataFrame(np.array(df_std_) / np.array(df_mean_)).T
+            aux.columns = ['gc_'+str(g) for g in groups]
+            adata.var[aux.columns] = aux
+            # mean_X_ = []
+            # std_X_ = []
+            # for i in range(X_.shape[1]):
+            #     mean_X_.extend(np.mean(X_[idx,i:] - X_[idx,i,None], axis=1)[0])
+            #     std_X_.extend(np.std(X_[idx,i:] - X_[idx,i,None], axis=1)[0])
+            #     if j == 0:
+            #         cols_.extend([','.join(p) for p in itertools.product([adata.var.index[i]],adata.var[i:].index)])
+            # j+=1
+            # df_mean_.append(mean_X_)
+            # df_std_.append(std_X_)
+
+    # aux = pd.DataFrame(df_std_, columns=cols_, index=groups) / pd.DataFrame(df_mean_, columns=cols_, index=groups)
+    # del(df_std_)
+    # del(df_mean_)
+    # aux = aux[[c for c in aux.columns if (len(set(c.split(',')))>1)]].abs()
+    # aux = aux.mean(axis=0).reset_index()
+    # aux.columns = ['gene', 'stability_cv']
+    # aux[['G1','G2']] = aux['gene'].str.split(',', expand=True)
+    # aux = pd.concat([aux[['G1','stability_cv']].set_index('G1'), aux[['G2','stability_cv']].set_index('G2')], axis=0).reset_index()
+    # aux.columns = ['gene', 'stability_cv']
+    # adata.var['pool_stability_cv'] = aux.groupby('gene').mean().loc[adata.var.index,:]
 
     return adata
 
