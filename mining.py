@@ -1,4 +1,6 @@
+import warnings
 import itertools
+
 import numpy as np
 import pandas as pd
 import anndata as ad
@@ -156,13 +158,13 @@ def stability_cv(adata, layer:str = None, groups_col:str = None, return_stb_cv_p
 
     return adata
 
-def uclustering_cv_stb(adata, cv_col:str = None, stb_col:str = None, scaler_object = None, nearestNeighbors_object = None, louvain_object = None):
+def uclustering_cv_stb(adata, cv_col:str = None, stb_col:str = None, scaler_object = None, nearestNeighbors_object = None, louvain_object = None, resolution:float = 1):
 
     if nearestNeighbors_object == None:
         nearestNeighbors_object = NearestNeighbors()
 
     if louvain_object == None:
-        louvain_object = Louvain(random_state=42)
+        louvain_object = Louvain(random_state=42, resolution=resolution)
 
     if cv_col == None:
         if ('pool_cv' in adata.var.columns):
