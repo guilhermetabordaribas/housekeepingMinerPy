@@ -5,9 +5,10 @@ import numpy as np
 import pandas as pd
 import anndata as ad
 
-from sklearn.preprocessing import StandardScaler, PowerTransformer, QuantileTransformer
+from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import NearestNeighbors
 from sknetwork.clustering import Louvain
+import umap
 
 def create_groups(adata, layer:str = None, study_col:str = None,  scaler_object = None, nearestNeighbors_object = None, louvain_object = None, umap_object=None):
     """
@@ -73,7 +74,7 @@ def create_groups(adata, layer:str = None, study_col:str = None,  scaler_object 
         um2.extend(x_umap[:,1].tolist())
 
     else:
-        for st_col in adata.obs[study_col].unique():
+        for i,st_col in enumerate(adata.obs[study_col].unique()):
             if nearestNeighbors_object == None:
                 nearestNeighbors_object = NearestNeighbors()
 

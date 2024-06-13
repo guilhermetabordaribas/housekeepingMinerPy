@@ -10,6 +10,7 @@ from sklearn.metrics import pairwise_distances
 from sklearn.cluster import KMeans
 from sklearn.neighbors import NearestNeighbors
 from sknetwork.clustering import Louvain
+import hdbscan
 
 def exprs_cv(adata, layer:str = None, groups_col:str = None, return_mean_per_group:bool = False, return_std_per_group:bool = False, return_cv_per_group:bool = False):
     """
@@ -158,7 +159,7 @@ def stability_cv(adata, layer:str = None, groups_col:str = None, return_stb_cv_p
 
     return adata
 
-def uclustering_cv_stb(adata, cv_col:str = None, stb_col:str = None, scaler_object = None, nearestNeighbors_object = None, louvain_object = None, resolution:float = 1):
+def uclustering_cv_stb(adata, cl_cols:list = [], scaler_object = None, nearestNeighbors_object = None, louvain_object = None, resolution:float = 1):
 
     if nearestNeighbors_object == None:
         nearestNeighbors_object = NearestNeighbors()
@@ -166,19 +167,37 @@ def uclustering_cv_stb(adata, cv_col:str = None, stb_col:str = None, scaler_obje
     if louvain_object == None:
         louvain_object = Louvain(random_state=42, resolution=resolution)
 
-    if cv_col == None:
+    # if cv_col == None:
+    #     if ('pool_cv' in adata.var.columns):
+    #         cv_col = 'pool_cv'
+    #     if ('simple_cv' in adata.var.columns):
+    #         cv_col = 'simple_cv'
+    #
+    # if stb_col == None:
+    #     if ('pool_stability_cv' in adata.var.columns):
+    #         stb_col = 'pool_stability_cv'
+    #     elif ('simple_stability_cv' in adata.var.columns):
+    #         stb_col = 'simple_stability_cv'
+    if not cl_cols:
         if ('pool_cv' in adata.var.columns):
-            cv_col = 'pool_cv'
-        if ('simple_cv' in adata.var.columns):
-            cv_col = 'simple_cv'
+            cl_cols.append('pool_cv')
+        elif ('simple_cv' in adata.var.columns):
+            cl_cols.append('simple_cv')
 
-    if stb_col == None:
         if ('pool_stability_cv' in adata.var.columns):
-            stb_col = 'pool_stability_cv'
+            cl_cols.append('pool_stability_cv')
         elif ('simple_stability_cv' in adata.var.columns):
-            stb_col = 'simple_stability_cv'
+            cl_cols.append('simple_stability_cv')
 
-    cl_X = adata.var[[cv_col, stb_col]]
+        if ('pool_mean' in adata.var.columns):
+            cl_cols.append('pool_mean')
+        elif ('simple_mean' in adata.var.columns):
+            cl_cols.append('simple_mean')
+
+    if not cl_cols:
+        raise Warning("You inform a empty 'cl_col' argument, but no columns for cv, stability_cv or mean were found. Please, consider run 'stability_cv()' and 'exprs_cv()' funciotns")
+
+    cl_X = adata.var[cl_cols]
 
     if scaler_object != None:
         cl_X = scaler_object.fit_transform(cl_X)
@@ -190,19 +209,38 @@ def uclustering_cv_stb(adata, cv_col:str = None, stb_col:str = None, scaler_obje
 
     return adata
 
-def sclustering_cv_stb(adata, cv_col:str = None, stb_col:str = None, scaler_object = None, kMeans = None):
+def sclustering_cv_stb(adata, cl_cols:list = [], scaler_object = None, kMeans = None):
 
     if kMeans == None:
         kMeans = kMeans()
 
-    if cv_col == None:
+    # if cv_col == None:
+    #     if ('pool_cv' in adata.var.columns):
+    #         cv_col = 'pool_cv'
+    # if stb_col == None:
+    #     if ('pool_stability_cv' in adata.var.columns):
+    #         stb_col = 'pool_stability_cv'
+    if not cl_cols:
         if ('pool_cv' in adata.var.columns):
-            cv_col = 'pool_cv'
-    if stb_col == None:
-        if ('pool_stability_cv' in adata.var.columns):
-            stb_col = 'pool_stability_cv'
+            cl_cols.append('pool_cv')
+        elif ('simple_cv' in adata.var.columns):
+            cl_cols.append('simple_cv')
 
-    cl_X = adata.var[[cv_col, stb_col]]
+        if ('pool_stability_cv' in adata.var.columns):
+            cl_cols.append('pool_stability_cv')
+        elif ('simple_stability_cv' in adata.var.columns):
+            cl_cols.append('simple_stability_cv')
+
+        if ('pool_mean' in adata.var.columns):
+            cl_cols.append('pool_mean')
+        elif ('simple_mean' in adata.var.columns):
+            cl_cols.append('simple_mean')
+
+    if not cl_cols:
+        raise Warning("You inform a empty 'cl_col' argument, but no columns for cv, stability_cv or mean were found. Please, consider run 'stability_cv()' and 'exprs_cv()' funciotns")
+
+
+    cl_X = adata.var[cl_cols]
 
     if scaler_object != None:
         cl_X = scaler_object.fit_transform(cl_X)
@@ -215,7 +253,7 @@ def sclustering_cv_stb(adata, cv_col:str = None, stb_col:str = None, scaler_obje
     return adata
 
 
-def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitness_function:str = None):
+def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitness_function:str = 'minimize_outliers'):
     if layer != None:
         X_ = adata.layers[layer]
     else:
@@ -239,7 +277,7 @@ def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitn
     num_parents_mating = 2
 
     sol_per_pop = 8
-    num_genes = len(bm)
+    num_genes = X_.shape[1]#len(bm)
 
     init_range_low = 0
     init_range_high = 2
@@ -256,7 +294,7 @@ def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitn
 
     ga_instance = pygad.GA(num_generations=num_generations,
                            num_parents_mating=num_parents_mating,
-                           fitness_func=fitness_function,
+                           fitness_func=fitness_func,
                            sol_per_pop=sol_per_pop,
                            num_genes=num_genes,
                            # init_range_low=init_range_low,

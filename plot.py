@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 import seaborn as sns
 
-def plot_stb_cv(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', hue:str = 'pool_mean', palette:str = None, legend:bool = False, figsize:tuple = (10,5)):
+def plot_stb_cv(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', hue:str = 'pool_mean', palette:str = None, legend:bool = False, figsize:tuple = (10,5), median_line:bool = True):
     fig = plt.figure(figsize=figsize)
     gs = GridSpec(2, 2, width_ratios=[5, 1], height_ratios=[1, 5], wspace=.02, hspace=.02)
 
@@ -39,5 +39,9 @@ def plot_stb_cv(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', hue:str =
     ax_hist_cv.set_xticklabels([])
     ax_hist_cv.tick_params(bottom = False)
     ax_hist_cv.grid(False)
+
+    if median_line:
+        ax_clu.axvline(np.median(adata.var[x]), ls='--', lw=1,color='black')
+        ax_clu.axhline(np.median(adata.var[y]), ls='--', lw=1, color='black')
 
     return None
