@@ -130,8 +130,9 @@ def plot_corr(adata, layer:str = None, col_labels:str = 'uclustering_cv_stb_labe
     ax.spines[['left', 'bottom', 'right', 'top']].set_visible(False)
     ax.set_xlabel('')
     ax.set_ylabel('')
-    ax.legend(bbox_to_anchor=(.85, -.175), ncol=2)
-    # ax.legend(bbox_to_anchor=(1., 1.))
+    # ax.legend(bbox_to_anchor=(.85, -.175), ncol=2)
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles=np.array(handles)[[1,2,4,5]].tolist(), labels=np.array(labels)[[1,2,4,5]].tolist(), bbox_to_anchor=(1., 1.), ncol=2)
     plt.grid(True, alpha=.25)
     plt.gca().set_axisbelow(True)
 
