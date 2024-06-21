@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 from matplotlib import colors
 import seaborn as sns
+from statannotations.Annotator import Annotator
 from scipy.stats import pearsonr, false_discovery_control
 import scipy.cluster.hierarchy as sch
 
