@@ -12,10 +12,10 @@ from statannotations.Annotator import Annotator
 from scipy.stats import pearsonr, false_discovery_control
 import scipy.cluster.hierarchy as sch
 
-def plot_stb_cv(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='pool_mean', hue:str = 'uclustering_cv_stb_labels', palette:str = None, legend:bool = False, figsize:tuple = (15,7), median_line:bool = True):
+def plot_stb_cv(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='pool_mean', hue:str = 'uclustering_cv_stb_labels', palette:str = None, legend:bool = False, figsize:tuple = (15,10), median_line:bool = True):
     fig = plt.figure(figsize=figsize)
 
-    gs = fig.add_gridspec(2,1)
+    gs = fig.add_gridspec(3,1)
     # gs_top = GridSpec(2, 3, width_ratios=[8, 1, 8], height_ratios=[1, 5], wspace=.02, hspace=.02)
     gs_top = gs[0].subgridspec(2, 3, width_ratios=[8, 1, 8], height_ratios=[1, 5], wspace=.02, hspace=.02)
     ax_clu = fig.add_subplot(gs_top[1,0])
@@ -24,9 +24,19 @@ def plot_stb_cv(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='po
     ax_y_bar = fig.add_subplot(gs_top[0,2])
     ax_y_violin = fig.add_subplot(gs_top[1,2])
 
-    gs_bottom = gs[1].subgridspec(2, 3, width_ratios=[8, 1, 8], height_ratios=[1,5], wspace=.02, hspace=.02)
-    ax_x_violin = fig.add_subplot(gs_bottom[1,0])
-    ax_z_violin = fig.add_subplot(gs_bottom[1,2])
+    gs_middle = gs[1].subgridspec(2, 3, width_ratios=[8, 1, 8], height_ratios=[1, 5], wspace=.02, hspace=.02)
+    ax_clu2 = fig.add_subplot(gs_middle[1,0])
+    ax_y2 = fig.add_subplot(gs_middle[1,1])
+    ax_x2 = fig.add_subplot(gs_middle[0,0])
+    ax_y_bar2 = fig.add_subplot(gs_middle[0,2])
+    ax_y_violin2 = fig.add_subplot(gs_middle[1,2])
+
+    gs_bottom = gs[2].subgridspec(2, 3, width_ratios=[8, 1, 8], height_ratios=[1, 5], wspace=.02, hspace=.02)
+    ax_clu3 = fig.add_subplot(gs_bottom[1,0])
+    ax_y3 = fig.add_subplot(gs_bottom[1,1])
+    ax_x3 = fig.add_subplot(gs_bottom[0,0])
+    ax_y_bar3 = fig.add_subplot(gs_bottom[0,2])
+    ax_y_violin3 = fig.add_subplot(gs_bottom[1,2])
 
     hue_order = adata.var[hue].unique()
     if hue == None:
@@ -37,6 +47,7 @@ def plot_stb_cv(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='po
         cmap = [colors.to_hex(cmap(i)) for i in range(len(hue_order))]
         cmap = dict(zip(hue_order,cmap))
 
+    # TOP grid
     sns.scatterplot(x=x, y=y, hue=hue, palette=cmap, data=adata.var, ax=ax_clu)
     ax_clu.get_legend().set_visible(legend)
     ax_clu.spines[['right', 'top']].set_visible(False)
@@ -70,18 +81,98 @@ def plot_stb_cv(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='po
     sns.boxplot(x=hue, y=y, order=order, palette=cmap, data=adata.var, ax=ax_y_violin)
     ax_y_violin.set_ylabel(None)
     ax_y_violin.set_yticklabels([])
+    aux_md = adata.var.groupby(hue).median(numeric_only=True)
+    arg_max = len(aux_md.loc[aux_md[y]<=adata.var[y].median(numeric_only=True)][y]) - .5
+    ax_y_violin.axvline(arg_max, ls=':', lw=1,color='gray')
+
+    # Middle grid
+    sns.scatterplot(x=x, y=z, hue=hue, palette=cmap, data=adata.var, ax=ax_clu2)
+    ax_clu2.get_legend().set_visible(legend)
+    ax_clu2.spines[['right', 'top']].set_visible(False)
+
+    sns.histplot(x=x, ec='white', data=adata.var, kde=True, ax=ax_x2)
+    ax_x2.spines[['left','right', 'top']].set_visible(False)
+    ax_x2.set_xlabel(None)
+    ax_x2.set_ylabel(None)
+    ax_x2.set_xticklabels([])
+    ax_x2.set_yticklabels([])
+    ax_x2.tick_params(left = False)
+    ax_x2.grid(False)
+
+    sns.histplot(y=z, ec='white', data=adata.var, kde=True, ax=ax_y2)
+    ax_y2.spines[['right', 'top','bottom']].set_visible(False)
+    ax_y2.set_ylabel(None)
+    ax_y2.set_xlabel(None)
+    ax_y2.set_yticklabels([])
+    ax_y2.set_xticklabels([])
+    ax_y2.tick_params(bottom = False)
+    ax_y2.grid(False)
+
+    order = adata.var.groupby(hue).median(numeric_only=True).sort_values(z).index
+    sns.countplot(x=hue, order=order, color='gray', data=adata.var, ax=ax_y_bar2)
+    ax_y_bar2.set_xticklabels([])
+    ax_y_bar2.set_xlabel(None)
+    ax_y_bar2.spines[['left','right', 'top']].set_visible(False)
+    ax_y_bar2.set_ylabel('Qty.')
+
+    sns.stripplot(x=hue, y=z, order=order, color='black', s=1, data=adata.var, ax=ax_y_violin2)
+    sns.boxplot(x=hue, y=z, order=order, palette=cmap, data=adata.var, ax=ax_y_violin2)
+    ax_y_violin2.set_ylabel(None)
+    ax_y_violin2.set_yticklabels([])
+    aux_md = adata.var.groupby(hue).median(numeric_only=True)
+    arg_max = len(aux_md.loc[aux_md[z]<=adata.var[z].median(numeric_only=True)][z]) - .5
+    ax_y_violin2.axvline(arg_max, ls=':', lw=1,color='gray')
+
+    # Bottom grid
+    sns.scatterplot(x=z, y=x, hue=hue, palette=cmap, data=adata.var, ax=ax_clu3)
+    ax_clu3.get_legend().set_visible(legend)
+    ax_clu3.spines[['right', 'top']].set_visible(False)
+
+    sns.histplot(x=z, ec='white', data=adata.var, kde=True, ax=ax_x3)
+    ax_x3.spines[['left','right', 'top']].set_visible(False)
+    ax_x3.set_xlabel(None)
+    ax_x3.set_ylabel(None)
+    ax_x3.set_xticklabels([])
+    ax_x3.set_yticklabels([])
+    ax_x3.tick_params(left = False)
+    ax_x3.grid(False)
+
+    sns.histplot(y=x, ec='white', data=adata.var, kde=True, ax=ax_y3)
+    ax_y3.spines[['right', 'top','bottom']].set_visible(False)
+    ax_y3.set_ylabel(None)
+    ax_y3.set_xlabel(None)
+    ax_y3.set_yticklabels([])
+    ax_y3.set_xticklabels([])
+    ax_y3.tick_params(bottom = False)
+    ax_y3.grid(False)
 
     order = adata.var.groupby(hue).median(numeric_only=True).sort_values(x).index
-    sns.stripplot(x=hue, y=x, order=order, color='black', s=1, data=adata.var, ax=ax_x_violin)
-    sns.boxplot(x=hue, y=x, order=order, palette=cmap, data=adata.var, ax=ax_x_violin)
+    sns.countplot(x=hue, order=order, color='gray', data=adata.var, ax=ax_y_bar3)
+    ax_y_bar3.set_xticklabels([])
+    ax_y_bar3.set_xlabel(None)
+    ax_y_bar3.spines[['left','right', 'top']].set_visible(False)
+    ax_y_bar3.set_ylabel('Qty.')
 
-    order = adata.var.groupby(hue).median(numeric_only=True).sort_values(z, ascending=False).index
-    sns.stripplot(x=hue, y=z, order=order, color='black', s=1, data=adata.var, ax=ax_z_violin)
-    sns.boxplot(x=hue, y=z, order=order, palette=cmap, data=adata.var, ax=ax_z_violin)
+    sns.stripplot(x=hue, y=x, order=order, color='black', s=1, data=adata.var, ax=ax_y_violin3)
+    sns.boxplot(x=hue, y=x, order=order, palette=cmap, data=adata.var, ax=ax_y_violin3)
+    ax_y_violin3.set_ylabel(None)
+    ax_y_violin3.set_yticklabels([])
+    aux_md = adata.var.groupby(hue).median(numeric_only=True)
+    arg_max = len(aux_md.loc[aux_md[x]<=adata.var[x].median(numeric_only=True)][x]) - .5
+    ax_y_violin3.axvline(arg_max, ls=':', lw=1,color='gray')
 
     if median_line:
         ax_clu.axvline(np.median(adata.var[x]), ls='--', lw=1,color='black')
         ax_clu.axhline(np.median(adata.var[y]), ls='--', lw=1, color='black')
+        ax_y_violin.axhline(np.median(adata.var[y]), ls='--', lw=1, color='black')
+
+        ax_clu2.axvline(np.median(adata.var[x]), ls='--', lw=1,color='black')
+        ax_clu2.axhline(np.median(adata.var[z]), ls='--', lw=1, color='black')
+        ax_y_violin2.axhline(np.median(adata.var[z]), ls='--', lw=1, color='black')
+
+        ax_clu3.axvline(np.median(adata.var[z]), ls='--', lw=1,color='black')
+        ax_clu3.axhline(np.median(adata.var[x]), ls='--', lw=1, color='black')
+        ax_y_violin3.axhline(np.median(adata.var[x]), ls='--', lw=1, color='black')
 
     return None
 

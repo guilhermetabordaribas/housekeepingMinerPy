@@ -10,6 +10,8 @@ from sklearn.metrics import pairwise_distances
 from sklearn.cluster import KMeans
 from sklearn.neighbors import NearestNeighbors
 from sknetwork.clustering import Louvain
+from sklearn.svm import SVC
+from sklearn.preprocessing import LabelBinarizer
 import hdbscan
 
 def exprs_cv(adata, layer:str = None, groups_col:str = None, return_mean_per_group:bool = False, return_std_per_group:bool = False, return_cv_per_group:bool = False):
@@ -159,6 +161,35 @@ def stability_cv(adata, layer:str = None, groups_col:str = None, return_stb_cv_p
 
     return adata
 
+def gene_gini_coeff(adata, layer:str = None):
+    """
+    G = 1 + 1/n - 2*sum_i(rank_k*x_i) / n*sum_i(x_i)
+    """
+
+    if layer != None:
+        X_ = adata.layers[layer]
+    else:
+        X_ = adata.X
+
+    gini_list = []
+    for i in range(X_.shape[1]):
+        x = np.abs(X_[:,i])
+        n = len(x)
+        s = x.sum()
+        rank = np.argsort(np.argsort(-x))
+        gini_list.append( 1 - (2.0 * (rank*x).sum() + s)/(n*s) )
+
+    adata.var['gini_coefficient'] = gini_list
+    return adata
+
+def tost(adata, layer:str = None, conditions:str = 'ar', vars_list:str = [], cohens_d:float = .5, is_parametric:bool = False, is_paired:bool = False):
+    if layer != None:
+        X_ = adata.to_df(layer)
+    else:
+        X_ = adata.to_df()
+    # aux =
+    dict_pairs = {p:[] for p in itertools.combinations(aux.conditions.unique(), 2)}
+
 def uclustering_cv_stb(adata, cl_cols:list = [], scaler_object = None, nearestNeighbors_object = None, louvain_object = None, resolution:float = 1):
 
     if nearestNeighbors_object == None:
@@ -253,11 +284,16 @@ def sclustering_cv_stb(adata, cl_cols:list = [], scaler_object = None, kMeans = 
     return adata
 
 
-def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitness_function:str = 'minimize_outliers'):
+def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitness_function:str = 'minimize_outliers', fitness_function_model = None, y:str = None):
     if layer != None:
         X_ = adata.layers[layer]
     else:
         X_ = adata.X
+
+    lb = LabelBinarizer()
+    y_ = lb.fit_transform(adata.obs[y].values)
+
+
 
     if fitness_function == 'minimize_groups_qty':
         def fitness_func(ga_instance, solution, solution_idx):
@@ -271,6 +307,20 @@ def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitn
             threshold = np.quantile(clusterer.outlier_scores_, q=.9)
             inliers = np.where(clusterer.outlier_scores_ <= threshold)[0].shape[0]
             fitness = inliers
+            return fitness
+    elif fitness_function == 'minimize_accuarcy':
+        def fitness_func(ga_instance, solution, solution_idx):
+            if fitness_function_model != None:
+                clf = fitness_function_model
+            else:
+                clf = SVC()
+                clf.fit(X_, y)
+            score_ = clf.score(X_, y_)
+
+            if  score_ == 0.5:
+                score_ = 0.5 + 0.000001
+
+            fitness = 1 / np.abs(0.5 - score_)
             return fitness
 
     num_generations = 100
