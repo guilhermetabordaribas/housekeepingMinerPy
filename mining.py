@@ -4,15 +4,18 @@ import itertools
 import numpy as np
 import pandas as pd
 import anndata as ad
-import pygad
 from scipy.spatial.distance import squareform
 from sklearn.metrics import pairwise_distances
 from sklearn.cluster import KMeans
 from sklearn.neighbors import NearestNeighbors
-from sknetwork.clustering import Louvain
 from sklearn.svm import SVC
-from sklearn.preprocessing import LabelBinarizer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import LabelBinarizer, StandardScaler
+from sklearn.utils.class_weight import compute_class_weight
+from sknetwork.clustering import Louvain
 import hdbscan
+import pygad
+from boruta import BorutaPy
 
 def exprs_cv(adata, layer:str = None, groups_col:str = None, return_mean_per_group:bool = False, return_std_per_group:bool = False, return_cv_per_group:bool = False):
     """
@@ -182,14 +185,6 @@ def gene_gini_coeff(adata, layer:str = None):
     adata.var['gini_coefficient'] = gini_list
     return adata
 
-def tost(adata, layer:str = None, conditions:str = 'ar', vars_list:str = [], cohens_d:float = .5, is_parametric:bool = False, is_paired:bool = False):
-    if layer != None:
-        X_ = adata.to_df(layer)
-    else:
-        X_ = adata.to_df()
-    # aux =
-    dict_pairs = {p:[] for p in itertools.combinations(aux.conditions.unique(), 2)}
-
 def uclustering_cv_stb(adata, cl_cols:list = [], scaler_object = None, nearestNeighbors_object = None, louvain_object = None, resolution:float = 1):
 
     if nearestNeighbors_object == None:
@@ -283,6 +278,14 @@ def sclustering_cv_stb(adata, cl_cols:list = [], scaler_object = None, kMeans = 
 
     return adata
 
+def tost(adata, layer:str = None, conditions:str = None, vars_list:str = [], cohens_d:float = .5, is_parametric:bool = False, is_paired:bool = False):
+    if layer != None:
+        X_ = adata.to_df(layer)
+    else:
+        X_ = adata.to_df()
+    # aux =
+    dict_pairs = {p:[] for p in itertools.combinations(aux.conditions.unique(), 2)}
+
 
 def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitness_function:str = 'minimize_outliers', fitness_function_model = None, y:str = None):
     if layer != None:
@@ -362,6 +365,78 @@ def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitn
     # solution, solution_fitness, solution_idx = ga_instance.best_solution()
     return ga_instance.best_solution()
 
+
+def boruta_selection(adata, layer:str = None, class_col:str = None, scaler = None, rf_model = None, class_weight:list = None, random_state:int = 42):
+    if layer != None:
+        X_ = adata.layers[layer]
+    else:
+        X_ = adata.X
+
+    if class_col == None:
+        raise Exception("Boruta feature selection requires a class_col argument, with, at least, two different classes.")
+    else:
+        y_ = adata.obs[class_col].values
+
+    if scaler != None:
+        X_ = scaler.fit_transform(X_)
+
+    if class_weight == None:
+        unique_ = np.unique(y_)
+        class_weight = dict(zip(unique_,compute_class_weight(class_weight="balanced", classes=unique_, y=y_)))
+
+    if rf_model == None:
+        rf_model = RandomForestClassifier(class_weight=class_weight)
+
+    feat_selector = BorutaPy(rf_model, n_estimators='auto', verbose=0, random_state=random_state)
+    feat_selector.fit(X_, y_)
+
+    feature_ranks = list(zip(adata.var.index,
+                         feat_selector.ranking_,
+                         feat_selector.support_))
+
+    result = {'genes':[], 'rank':[], 'support':[]}
+    for feat in feature_ranks:
+        if feat[2]:
+            result['genes'].append(feat[0])
+            result['rank'].append(feat[1])
+            result['support'].append(feat[2])
+            # print('Feature: {:<25} Rank: {},  Keep: {}'.format(feat[0], feat[1], feat[2]))
+    return result
+
+def set_boruta_selection(adata, layer:str = None, class_col:str = None, scaler = None,  rf_model = None, random_state:int = 42, class_weight:list = None, n_set:int = 5, sample_size:int = None, replace:bool = False):
+    if class_col == None:
+        raise Exception("Boruta feature selection requires a class_col argument, with, at least, two different classes.")
+    else:
+        y_ = adata.obs[class_col].values
+
+    results = []
+    for i,set in enumerate(set_balance_resample(y_, n_set=n_set, random_state=random_state, sample_size=sample_size, replace=replace)):
+        results.append(boruta_selection(adata, layer=layer, rf_model=rf_model, class_col=class_col, class_weight=class_weight, scaler=scaler, random_state=random_state+i))
+
+    return results
+
+def balance_resample(y_var:list = None, random_state:int = 42, sample_size:int = None, replace:bool = False):
+    v, c = np.unique(y_var, return_counts=True)
+    if sample_size == None:
+        sample_size = c.min()
+    else:
+        if sample_size > c.min():
+            print("Warning, sample_size greather than the minimum class counts. Truning sample_size =", str(c.min()))
+            sample_size = c.min()
+
+    idx = np.array([], dtype=int)
+    for v_ in v:
+        np.random.seed(random_state)
+        idx = np.concatenate( ( idx, np.random.choice(np.where(y_var == v_)[0], size=sample_size, replace=replace) ))
+
+    return idx
+
+def set_balance_resample(y_var:list = None, n_set:int = 5, random_state:int = 42, sample_size:int = None, replace:bool = False):
+    set_idx = []
+    for n in range(n_set):
+        set_idx.append( balance_resample(y_var, random_state+n, sample_size, replace) )
+
+    return set_idx
 # def fitness_func(ga_instance, solution, solution_idx):
 #     lb = LabelBinarizer()
 #     # X = df_cnt.iloc[:,:-1].values[:,np.where(solution)[0]]
