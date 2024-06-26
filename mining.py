@@ -5,7 +5,8 @@ import numpy as np
 import pandas as pd
 import anndata as ad
 from scipy.spatial.distance import squareform
-from sklearn.metrics import pairwise_distances
+from scipy.stats import pearsonr, false_discovery_control, ttest_ind, brunnermunzel, ttest_rel, wilcoxon
+from sklearn.metrics import pairwise_distances, f1_score,
 from sklearn.cluster import KMeans
 from sklearn.neighbors import NearestNeighbors
 from sklearn.svm import SVC
@@ -278,13 +279,50 @@ def sclustering_cv_stb(adata, cl_cols:list = [], scaler_object = None, kMeans = 
 
     return adata
 
-def tost(adata, layer:str = None, conditions:str = None, vars_list:str = [], cohens_d:float = .5, is_parametric:bool = False, is_paired:bool = False):
+def tost(adata, layer:str = None, class_col:str = None, combinations_list:list = None, vars_list:str = [], cohens_d:float = .5, is_parametric:bool = False, is_paired:bool = False, correct_fdr:bool = True):
+    if class_col == None:
+        raise Exception("TOST requires a class_col argument, with, at least, two different classes.")
+
     if layer != None:
-        X_ = adata.to_df(layer)
+        aux = adata.to_df(layer)
     else:
-        X_ = adata.to_df()
-    # aux =
-    dict_pairs = {p:[] for p in itertools.combinations(aux.conditions.unique(), 2)}
+        aux = adata.to_df()
+
+    aux[class_col] = adata.obs[class_col]
+
+    if combinations_list == None:
+        combinations_list = list(itertools.combinations(aux[class_col].unique(), 2))
+
+    dict_pairs = {p:[] for p in combinations_list}
+
+    method_ = brunnermunzel
+    if is_paired:
+        if is_parametric:
+            method_ = ttest_rel
+        else:
+            method_ = wilcoxon
+    else:
+        if is_parametric:
+            method_ = ttest_ind
+
+    for p in dict_pairs.keys():
+        pv = []
+        delta = cohens_d*aux[aux[class_col].isin(p)].std(numeric_only=True)
+
+        for g in aux.columns[:-1]:
+            pv.append(max(method_(aux[aux[class_col]==p[0]][g].values, aux[aux[class_col]==p[1]][g].values + delta[g], alternative='less').pvalue,
+            method_(aux[aux[class_col]==p[0]][g].values, aux[aux[class_col]==p[1]][g].values - delta[g], alternative='greater').pvalue)
+            )
+
+        if correct_fdr:
+            dict_pairs[p] = false_discovery_control(pv)
+        else:
+            dict_pairs[p] = pv
+
+    aux_tost = pd.DataFrame(dict_pairs, index=aux.columns[:-1]).T[ (pd.DataFrame(dict_pairs, index=aux.columns[:-1]).T<=0.05).sum().sort_values(ascending=False).index ]
+    aux_tost.index = ['pv_'+'_'.join(p) for p in aux_tost.index]
+
+    return aux_tost
 
 
 def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitness_function:str = 'minimize_outliers', fitness_function_model = None, y:str = None):
@@ -316,10 +354,41 @@ def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitn
             if fitness_function_model != None:
                 clf = fitness_function_model
             else:
-                clf = SVC()
+                clf = SVC(class_weight='balanced')
                 clf.fit(X_, y)
             score_ = clf.score(X_, y_)
 
+            if  score_ == 0.5:
+                score_ = 0.5 + 0.000001
+
+            fitness = 1 / np.abs(0.5 - score_)
+            return fitness
+    elif fitness_function == 'minimize_f1_score':
+        def fitness_func(ga_instance, solution, solution_idx):
+            if fitness_function_model != None:
+                clf = fitness_function_model
+            else:
+                clf = SVC(class_weight='balanced')
+                clf.fit(X_, y)
+
+            y_p = clf.predict(X_)
+            score_ = f1_score(y_, y_p)
+            if  score_ == 0.5:
+                score_ = 0.5 + 0.000001
+
+            fitness = 1 / np.abs(0.5 - score_)
+            return fitness
+
+    elif fitness_function == 'minimize_auc':
+        def fitness_func(ga_instance, solution, solution_idx):
+            if fitness_function_model != None:
+                clf = fitness_function_model
+            else:
+                clf = SVC(class_weight='balanced', probability=True)
+                clf.fit(X_, y)
+
+            y_p = clf.predict(X_)
+            score_ = f1_score(y_, y_p)
             if  score_ == 0.5:
                 score_ = 0.5 + 0.000001
 
