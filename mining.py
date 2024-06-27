@@ -6,7 +6,7 @@ import pandas as pd
 import anndata as ad
 from scipy.spatial.distance import squareform
 from scipy.stats import pearsonr, false_discovery_control, ttest_ind, brunnermunzel, ttest_rel, wilcoxon
-from sklearn.metrics import pairwise_distances, f1_score,
+from sklearn.metrics import pairwise_distances, roc_auc_score, f1_score, roc_auc_score
 from sklearn.cluster import KMeans
 from sklearn.neighbors import NearestNeighbors
 from sklearn.svm import SVC
@@ -186,7 +186,7 @@ def gene_gini_coeff(adata, layer:str = None):
     adata.var['gini_coefficient'] = gini_list
     return adata
 
-def uclustering_cv_stb(adata, cl_cols:list = [], scaler_object = None, nearestNeighbors_object = None, louvain_object = None, resolution:float = 1):
+def uclustering_cv_stb_gini(adata, cl_cols:list = [], scaler_object = None, nearestNeighbors_object = None, louvain_object = None, resolution:float = 1):
 
     if nearestNeighbors_object == None:
         nearestNeighbors_object = NearestNeighbors()
@@ -194,17 +194,6 @@ def uclustering_cv_stb(adata, cl_cols:list = [], scaler_object = None, nearestNe
     if louvain_object == None:
         louvain_object = Louvain(random_state=42, resolution=resolution)
 
-    # if cv_col == None:
-    #     if ('pool_cv' in adata.var.columns):
-    #         cv_col = 'pool_cv'
-    #     if ('simple_cv' in adata.var.columns):
-    #         cv_col = 'simple_cv'
-    #
-    # if stb_col == None:
-    #     if ('pool_stability_cv' in adata.var.columns):
-    #         stb_col = 'pool_stability_cv'
-    #     elif ('simple_stability_cv' in adata.var.columns):
-    #         stb_col = 'simple_stability_cv'
     if not cl_cols:
         if ('pool_cv' in adata.var.columns):
             cl_cols.append('pool_cv')
@@ -236,17 +225,11 @@ def uclustering_cv_stb(adata, cl_cols:list = [], scaler_object = None, nearestNe
 
     return adata
 
-def sclustering_cv_stb(adata, cl_cols:list = [], scaler_object = None, kMeans = None):
+def sclustering_cv_stb_gini(adata, cl_cols:list = [], scaler_object = None, kMeans = None):
 
     if kMeans == None:
         kMeans = kMeans()
 
-    # if cv_col == None:
-    #     if ('pool_cv' in adata.var.columns):
-    #         cv_col = 'pool_cv'
-    # if stb_col == None:
-    #     if ('pool_stability_cv' in adata.var.columns):
-    #         stb_col = 'pool_stability_cv'
     if not cl_cols:
         if ('pool_cv' in adata.var.columns):
             cl_cols.append('pool_cv')
@@ -265,7 +248,6 @@ def sclustering_cv_stb(adata, cl_cols:list = [], scaler_object = None, kMeans = 
 
     if not cl_cols:
         raise Warning("You inform a empty 'cl_col' argument, but no columns for cv, stability_cv or mean were found. Please, consider run 'stability_cv()' and 'exprs_cv()' funciotns")
-
 
     cl_X = adata.var[cl_cols]
 
@@ -325,16 +307,13 @@ def tost(adata, layer:str = None, class_col:str = None, combinations_list:list =
     return aux_tost
 
 
-def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitness_function:str = 'minimize_outliers', fitness_function_model = None, y:str = None):
+def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitness_function:str = 'minimize_outliers', fitness_function_model = None, y:str = None, suppress_warnings:bool = False):
     if layer != None:
         X_ = adata.layers[layer]
     else:
         X_ = adata.X
 
-    lb = LabelBinarizer()
-    y_ = lb.fit_transform(adata.obs[y].values)
-
-
+    y_ = adata.obs[y].values
 
     if fitness_function == 'minimize_groups_qty':
         def fitness_func(ga_instance, solution, solution_idx):
@@ -351,12 +330,14 @@ def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitn
             return fitness
     elif fitness_function == 'minimize_accuarcy':
         def fitness_func(ga_instance, solution, solution_idx):
+            # print(solution)
             if fitness_function_model != None:
                 clf = fitness_function_model
             else:
                 clf = SVC(class_weight='balanced')
-                clf.fit(X_, y)
-            score_ = clf.score(X_, y_)
+                clf.fit(X_[:, np.where( solution )[0]], y_)
+
+            score_ = clf.score(X_[:, np.where( solution )[0]], y_)
 
             if  score_ == 0.5:
                 score_ = 0.5 + 0.000001
@@ -369,26 +350,28 @@ def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitn
                 clf = fitness_function_model
             else:
                 clf = SVC(class_weight='balanced')
-                clf.fit(X_, y)
+                clf.fit(X_[:, np.where( solution )[0]], y_)
 
-            y_p = clf.predict(X_)
-            score_ = f1_score(y_, y_p)
+            y_p = clf.predict(X_[:, np.where( solution )[0]])
+            score_ = f1_score(y_, y_p, average='weighted')
+
             if  score_ == 0.5:
                 score_ = 0.5 + 0.000001
 
             fitness = 1 / np.abs(0.5 - score_)
             return fitness
-
     elif fitness_function == 'minimize_auc':
         def fitness_func(ga_instance, solution, solution_idx):
             if fitness_function_model != None:
                 clf = fitness_function_model
             else:
                 clf = SVC(class_weight='balanced', probability=True)
-                clf.fit(X_, y)
+                clf.fit(X_[:, np.where( solution )[0]], y_)
 
-            y_p = clf.predict(X_)
-            score_ = f1_score(y_, y_p)
+            lb = LabelBinarizer()
+            y_p = clf.predict_proba(X_[:, np.where( solution )[0]])
+            score_ = roc_auc_score(lb.fit_transform(y_), y_p, average='weighted', multi_class='ovo')
+
             if  score_ == 0.5:
                 score_ = 0.5 + 0.000001
 
@@ -399,7 +382,7 @@ def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitn
     num_parents_mating = 2
 
     sol_per_pop = 8
-    num_genes = X_.shape[1]#len(bm)
+    num_genes = X_.shape[1]
 
     init_range_low = 0
     init_range_high = 2
@@ -427,11 +410,12 @@ def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitn
                            mutation_type=mutation_type,
                            mutation_percent_genes=mutation_percent_genes,
                            gene_type=gene_type,
-                           gene_space=[0, 1]
+                           gene_space=[0, 1],
+                           suppress_warnings=suppress_warnings
                           )
 
     ga_instance.run()
-    # solution, solution_fitness, solution_idx = ga_instance.best_solution()
+
     return ga_instance.best_solution()
 
 

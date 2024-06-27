@@ -12,7 +12,7 @@ from statannotations.Annotator import Annotator
 from scipy.stats import pearsonr, false_discovery_control
 import scipy.cluster.hierarchy as sch
 
-def plot_stb_cv(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='pool_mean', hue:str = 'uclustering_cv_stb_labels', palette:str = None, legend:bool = False, figsize:tuple = (15,10), median_line:bool = True):
+def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='pool_mean', hue:str = 'uclustering_cv_stb_labels', palette:str = None, legend:bool = False, figsize:tuple = (8.35*2,8.35), median_line:bool = True):
     fig = plt.figure(figsize=figsize)
 
     gs = fig.add_gridspec(3,1)
@@ -81,16 +81,16 @@ def plot_stb_cv(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='po
     sns.boxplot(x=hue, y=y, order=order, palette=cmap, data=adata.var, ax=ax_y_violin)
     ax_y_violin.set_ylabel(None)
     ax_y_violin.set_yticklabels([])
-    aux_md = adata.var.groupby(hue).median(numeric_only=True)
+    aux_md = adata.var.groupby(hue).quantile(0.75, numeric_only=True)
     arg_max = len(aux_md.loc[aux_md[y]<=adata.var[y].median(numeric_only=True)][y]) - .5
     ax_y_violin.axvline(arg_max, ls=':', lw=1,color='gray')
 
     # Middle grid
-    sns.scatterplot(x=x, y=z, hue=hue, palette=cmap, data=adata.var, ax=ax_clu2)
+    sns.scatterplot(x=y, y=z, hue=hue, palette=cmap, data=adata.var, ax=ax_clu2)
     ax_clu2.get_legend().set_visible(legend)
     ax_clu2.spines[['right', 'top']].set_visible(False)
 
-    sns.histplot(x=x, ec='white', data=adata.var, kde=True, ax=ax_x2)
+    sns.histplot(x=y, ec='white', data=adata.var, kde=True, ax=ax_x2)
     ax_x2.spines[['left','right', 'top']].set_visible(False)
     ax_x2.set_xlabel(None)
     ax_x2.set_ylabel(None)
@@ -119,7 +119,7 @@ def plot_stb_cv(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='po
     sns.boxplot(x=hue, y=z, order=order, palette=cmap, data=adata.var, ax=ax_y_violin2)
     ax_y_violin2.set_ylabel(None)
     ax_y_violin2.set_yticklabels([])
-    aux_md = adata.var.groupby(hue).median(numeric_only=True)
+    aux_md = adata.var.groupby(hue).quantile(0.75, numeric_only=True)
     arg_max = len(aux_md.loc[aux_md[z]<=adata.var[z].median(numeric_only=True)][z]) - .5
     ax_y_violin2.axvline(arg_max, ls=':', lw=1,color='gray')
 
@@ -157,7 +157,7 @@ def plot_stb_cv(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='po
     sns.boxplot(x=hue, y=x, order=order, palette=cmap, data=adata.var, ax=ax_y_violin3)
     ax_y_violin3.set_ylabel(None)
     ax_y_violin3.set_yticklabels([])
-    aux_md = adata.var.groupby(hue).median(numeric_only=True)
+    aux_md = adata.var.groupby(hue).quantile(0.75, numeric_only=True)
     arg_max = len(aux_md.loc[aux_md[x]<=adata.var[x].median(numeric_only=True)][x]) - .5
     ax_y_violin3.axvline(arg_max, ls=':', lw=1,color='gray')
 
@@ -166,7 +166,7 @@ def plot_stb_cv(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='po
         ax_clu.axhline(np.median(adata.var[y]), ls='--', lw=1, color='black')
         ax_y_violin.axhline(np.median(adata.var[y]), ls='--', lw=1, color='black')
 
-        ax_clu2.axvline(np.median(adata.var[x]), ls='--', lw=1,color='black')
+        ax_clu2.axvline(np.median(adata.var[y]), ls='--', lw=1,color='black')
         ax_clu2.axhline(np.median(adata.var[z]), ls='--', lw=1, color='black')
         ax_y_violin2.axhline(np.median(adata.var[z]), ls='--', lw=1, color='black')
 
@@ -182,9 +182,9 @@ def plot_corr(adata, layer:str = None, col_labels:str = 'uclustering_cv_stb_labe
         labels.append(adata.var.groupby(col_labels).median(numeric_only=True).sort_values('pool_cv').index[0])
 
     if layer != None:
-        aux = adata[:,adata.var.[col_labels].isin(labels)].layers[layer]
+        aux = adata[:,adata.var[col_labels].isin(labels)].layers[layer]
     else:
-        aux = adata[:,adata.var.[col_labels].isin(labels)].X
+        aux = adata[:,adata.var[col_labels].isin(labels)].X
 
     cols_ = list(itertools.combinations_with_replacement(aux.columns,2, ))
     P_list = []
