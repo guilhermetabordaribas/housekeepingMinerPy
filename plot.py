@@ -176,57 +176,131 @@ def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:st
 
     return None
 
-def plot_corr(adata, layer:str = None, col_labels:str = 'uclustering_cv_stb_labels', labels:list = None, r_pearson_lim:float = 0.5, p_value_lim:float = 0.05, fdr:bool = True, figsize:tuple = (7,7)):
-    if labels == None:
-        labels = []
-        labels.append(adata.var.groupby(col_labels).median(numeric_only=True).sort_values('pool_cv').index[0])
+def plot_corr(adata, layer:str = None, r_pearson_lim:float = 0.5, p_value_lim:float = 0.05, correct_fdr:bool = True, figsize:tuple = (8.35*2/3, 8.35*2/3), bbox_to_anchor:tuple=(1.2, 1)):
+    fig = plt.figure(figsize=figsize)
+    gs = GridSpec(2, 2, width_ratios=[8, 1], height_ratios=[1,8], wspace=.02, hspace=.02)
+    ax = fig.add_subplot(gs[1,0])
+    ax_y_bar = fig.add_subplot(gs[0,0])
+    ax_y_dn = fig.add_subplot(gs[1,1])
 
     if layer != None:
-        aux = adata[:,adata.var[col_labels].isin(labels)].layers[layer]
+        aux = adata.to_df(layer)
     else:
-        aux = adata[:,adata.var[col_labels].isin(labels)].X
+        aux = adata.to_df()
+    original_order = aux.columns
 
-    cols_ = list(itertools.combinations_with_replacement(aux.columns,2, ))
+    # Claculate the linkage by correlation between genes
+    Z = sch.linkage(aux.T.astype(float).values, metric='correlation', method='average')
+
+    # Calculate Pearson corralations and p-values
+    cols_ = list(itertools.combinations_with_replacement(original_order,2, ))
     P_list = []
     pv_list = []
     pair = []
     for col in cols_:
         pair.append(','.join(col))
-        P_list.append(pearsonr(aux[col[0]], aux[col[1]]).statistic)
-        pv_list.append(pearsonr(aux[col[0]], aux[col[1]]).pvalue)
+        aux_pearsonr = pearsonr(aux[col[0]], aux[col[1]])
+        P_list.append(aux_pearsonr.statistic)
+        pv_list.append(aux_pearsonr.pvalue)
 
-    if fdr:
+    if correct_fdr:
         pv_list = false_discovery_control(pv_list)
+
     aux = pd.DataFrame([pair, P_list,pv_list], index=['gene_pair','R','pvalue']).T
     aux[['Gene_name_x', 'Gene_name_y']] = aux.gene_pair.str.split(',', expand=True)
     aux_2 = aux.copy()
     aux_2.columns = ['gene_pair', 'R', 'pvalue', 'Gene_name_y', 'Gene_name_x']#
     aux = pd.concat([aux, aux_2])
-    aux_R = aux.drop_duplicates().pivot(columns='Gene_name_x', index='Gene_name_y', values='R')
 
-    Z=sch.linkage(aux_R.astype(float), method='ward')
-    order = sch.leaves_list(Z)
-    n_gene_dict = dict(zip(aux_R.columns[order],range(len(aux_R.columns))))
+    # Dendrogram
+    dn = sch.dendrogram(Z, orientation='right', no_labels=True, color_threshold=0, above_threshold_color='black',  ax=ax_y_dn)
+    ax_y_dn.spines[['left', 'bottom', 'right', 'top']].set_visible(False)
+    ax_y_dn.grid(False)
+    ax_y_dn.set_xticks([], [])
+
+    order = dn['leaves']
+    original_ticks = np.array(dn['icoord'])[np.where(np.array(dn['dcoord'])==0)]
+    ticks_ = np.sort(original_ticks)
+    n_gene_dict = dict( zip(original_order[order], ticks_) )
+
+    r_gt = 'R Pearson ≥ '+ str(r_pearson_lim)
+    r_lt = 'R Pearson < '+ str(r_pearson_lim)
+    p_gt = 'padj > '+ str(p_value_lim)
+    p_lt = 'padj ≤ '+ str(p_value_lim)
 
     aux['Gene_name_x'] = aux.Gene_name_x.map(n_gene_dict)
     aux['Gene_name_y'] = aux.Gene_name_y.map(n_gene_dict)
-    aux['R'] = np.where((aux.R.abs().values>=r_pearson_lim), 'R Pearson ≥'+str(r_pearson_lim), 'R Pearson <'+str(r_pearson_lim))
-    aux['pvalue'] = np.where((aux.pvalue.abs().values<=p_value_lim), 'padj ≤'+str(p_value_lim), 'padj >'+str(p_value_lim))
+    aux['R'] = np.where((aux.R.abs().values>=r_pearson_lim), r_gt, r_lt)
+    aux['pvalue'] = np.where((aux.pvalue.abs().values<=p_value_lim), p_lt, p_gt)
+    aux = aux.drop_duplicates()
+    aux_pvalue = aux.pivot(columns='Gene_name_x', index='Gene_name_y', values='pvalue')
 
-
-    fig = plt.figure(figsize=figsize)
-    ax = fig.add_subplot(111)
+    # scatterplot
     sns.scatterplot(x='Gene_name_x', y='Gene_name_y', hue='R', marker='o', size='pvalue', palette=['green', 'black'], edgecolor='grey', data=aux, ax=ax)
-    ax.set_xticks(range(len(n_gene_dict.keys())), aux_R.columns[order], rotation=90, style='italic')
-    ax.set_yticks(range(len(n_gene_dict.keys())), aux_R.columns[order], style='italic')
+    ax.set_xticks(ticks_, original_order[order], rotation=90, style='italic')
+    ax.set_yticks(ticks_, original_order[order], style='italic')
     ax.spines[['left', 'bottom', 'right', 'top']].set_visible(False)
     ax.set_xlabel('')
     ax.set_ylabel('')
-    # ax.legend(bbox_to_anchor=(.85, -.175), ncol=2)
+    ax.set_ylim(ax_y_dn.get_ylim())
+    ax.grid(True, alpha=.25)
+    ax.set_axisbelow(True)
+
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles=np.array(handles)[[1,2,4,5]].tolist(), labels=np.array(labels)[[1,2,4,5]].tolist(), bbox_to_anchor=(1., 1.), ncol=2)
-    plt.grid(True, alpha=.25)
-    plt.gca().set_axisbelow(True)
+    ax.legend(handles=np.array(handles)[[1,2,4,5]].tolist(), labels=np.array(labels)[[1,2,4,5]].tolist(), bbox_to_anchor=bbox_to_anchor, ncol=2)
+
+    # barplot
+    data = aux[aux.R==r_gt].groupby('Gene_name_x').count().loc[original_ticks,:].reset_index()
+    sns.barplot(x='Gene_name_x', y='gene_pair', color='grey',data=data,ax=ax_y_bar)
+    ax_y_bar.set_xlabel('Qty.')
+    ax_y_bar.set_ylabel('')
+    ax_y_bar.set_yticks((0,data.gene_pair.max()))
+    ax_y_bar.set_xticklabels([])
+    ax_y_bar.set_xlabel(None)
+    ax_y_bar.spines[['left','right', 'top', 'bottom']].set_visible(False)
+    ax_y_bar.set_ylabel('Qty.')
+
+    # cols_ = list(itertools.combinations_with_replacement(aux.columns,2, ))
+    # P_list = []
+    # pv_list = []
+    # pair = []
+    # for col in cols_:
+    #     pair.append(','.join(col))
+    #     P_list.append(pearsonr(aux[col[0]], aux[col[1]]).statistic)
+    #     pv_list.append(pearsonr(aux[col[0]], aux[col[1]]).pvalue)
+    #
+    # if fdr:
+    #     pv_list = false_discovery_control(pv_list)
+    # aux = pd.DataFrame([pair, P_list,pv_list], index=['gene_pair','R','pvalue']).T
+    # aux[['Gene_name_x', 'Gene_name_y']] = aux.gene_pair.str.split(',', expand=True)
+    # aux_2 = aux.copy()
+    # aux_2.columns = ['gene_pair', 'R', 'pvalue', 'Gene_name_y', 'Gene_name_x']#
+    # aux = pd.concat([aux, aux_2])
+    # aux_R = aux.drop_duplicates().pivot(columns='Gene_name_x', index='Gene_name_y', values='R')
+    #
+    # Z=sch.linkage(aux_R.astype(float), method='ward')
+    # order = sch.leaves_list(Z)
+    # n_gene_dict = dict(zip(aux_R.columns[order],range(len(aux_R.columns))))
+    #
+    # aux['Gene_name_x'] = aux.Gene_name_x.map(n_gene_dict)
+    # aux['Gene_name_y'] = aux.Gene_name_y.map(n_gene_dict)
+    # aux['R'] = np.where((aux.R.abs().values>=r_pearson_lim), 'R Pearson ≥'+str(r_pearson_lim), 'R Pearson <'+str(r_pearson_lim))
+    # aux['pvalue'] = np.where((aux.pvalue.abs().values<=p_value_lim), 'padj ≤'+str(p_value_lim), 'padj >'+str(p_value_lim))
+    #
+    #
+    # fig = plt.figure(figsize=figsize)
+    # ax = fig.add_subplot(111)
+    # sns.scatterplot(x='Gene_name_x', y='Gene_name_y', hue='R', marker='o', size='pvalue', palette=['green', 'black'], edgecolor='grey', data=aux, ax=ax)
+    # ax.set_xticks(range(len(n_gene_dict.keys())), aux_R.columns[order], rotation=90, style='italic')
+    # ax.set_yticks(range(len(n_gene_dict.keys())), aux_R.columns[order], style='italic')
+    # ax.spines[['left', 'bottom', 'right', 'top']].set_visible(False)
+    # ax.set_xlabel('')
+    # ax.set_ylabel('')
+    # # ax.legend(bbox_to_anchor=(.85, -.175), ncol=2)
+    # handles, labels = ax.get_legend_handles_labels()
+    # ax.legend(handles=np.array(handles)[[1,2,4,5]].tolist(), labels=np.array(labels)[[1,2,4,5]].tolist(), bbox_to_anchor=(1., 1.), ncol=2)
+    # plt.grid(True, alpha=.25)
+    # plt.gca().set_axisbelow(True)
 
     return None
 
