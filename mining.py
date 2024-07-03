@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import anndata as ad
 from scipy.spatial.distance import squareform
-from scipy.stats import pearsonr, false_discovery_control, ttest_ind, brunnermunzel, ttest_rel, wilcoxon
+from scipy.stats import pearsonr, combine_pvalues, false_discovery_control, ttest_ind, brunnermunzel, ttest_rel, wilcoxon
 from sklearn.metrics import pairwise_distances, roc_auc_score, f1_score, roc_auc_score
 from sklearn.cluster import KMeans
 from sklearn.neighbors import NearestNeighbors
@@ -60,7 +60,9 @@ def exprs_cv(adata, layer:str = None, groups_col:str = None, return_mean_per_gro
 
     else:
         cols_aux = []
-        for gc in adata.obs[groups_col].unique():
+        print('CV: computing groups data:', end=' ')
+        for i,gc in enumerate(adata.obs[groups_col].unique()):
+            print(i, end=' ')
             if layer != None:
                 X_ = adata[adata.obs[groups_col]==gc,:].layers[layer]
             else:
@@ -70,6 +72,7 @@ def exprs_cv(adata, layer:str = None, groups_col:str = None, return_mean_per_gro
             adata.var['std_'+str(gc)] = np.std(X_, axis=0)
             if return_cv_per_group:
                 adata.var['cv_'+str(gc)] = adata.var['std_'+str(gc)].values / adata.var['mean_'+str(gc)].values
+        print('')
 
         adata.var['pool_mean'] = adata.var[['mean_'+str(c) for c in adata.obs[groups_col].unique()]].mean(axis=1)
         adata.var['pool_std'] = np.sqrt( np.square(adata.var[['std_'+str(c) for c in adata.obs[groups_col].unique()]]).mean(axis=1) )
@@ -127,45 +130,21 @@ def stability_cv(adata, layer:str = None, groups_col:str = None, return_stb_cv_p
     else:
         j = 0
         groups = adata.obs[groups_col].unique()
-        print('Computing groups data:', end=' ')
+        print('Stability: computing groups data:', end=' ')
         for i,gc in enumerate(groups):
             print(i, end=' ')
             idx = np.where(adata.obs[groups_col]==gc)
             pw_dist = pairwise_distances(X_[idx,:][0].T)
             df_mean_.append( pw_dist.mean(axis=0) )
             df_std_.append( pw_dist.std(axis=0) )
-
+            if return_stb_cv_per_group:
+                adata.var['stb_'+str(gc)] = (np.array(df_std_[-1]) / np.array(df_mean_[-1]))
+        print('')
         adata.var['pool_stability_cv'] = (np.array(df_std_) / np.array(df_mean_)).mean(axis=0)
-
-        if return_stb_cv_per_group:
-            aux = pd.DataFrame(np.array(df_std_) / np.array(df_mean_)).T
-            aux.columns = ['gc_'+str(g) for g in groups]
-            adata.var[aux.columns] = aux
-            # mean_X_ = []
-            # std_X_ = []
-            # for i in range(X_.shape[1]):
-            #     mean_X_.extend(np.mean(X_[idx,i:] - X_[idx,i,None], axis=1)[0])
-            #     std_X_.extend(np.std(X_[idx,i:] - X_[idx,i,None], axis=1)[0])
-            #     if j == 0:
-            #         cols_.extend([','.join(p) for p in itertools.product([adata.var.index[i]],adata.var[i:].index)])
-            # j+=1
-            # df_mean_.append(mean_X_)
-            # df_std_.append(std_X_)
-
-    # aux = pd.DataFrame(df_std_, columns=cols_, index=groups) / pd.DataFrame(df_mean_, columns=cols_, index=groups)
-    # del(df_std_)
-    # del(df_mean_)
-    # aux = aux[[c for c in aux.columns if (len(set(c.split(',')))>1)]].abs()
-    # aux = aux.mean(axis=0).reset_index()
-    # aux.columns = ['gene', 'stability_cv']
-    # aux[['G1','G2']] = aux['gene'].str.split(',', expand=True)
-    # aux = pd.concat([aux[['G1','stability_cv']].set_index('G1'), aux[['G2','stability_cv']].set_index('G2')], axis=0).reset_index()
-    # aux.columns = ['gene', 'stability_cv']
-    # adata.var['pool_stability_cv'] = aux.groupby('gene').mean().loc[adata.var.index,:]
 
     return adata
 
-def gene_gini_coeff(adata, layer:str = None):
+def gene_gini_coeff(adata, layer:str = None, groups_col:str = None):
     """
     G = 1 + 1/n - 2*sum_i(rank_k*x_i) / n*sum_i(x_i)
     """
@@ -184,6 +163,25 @@ def gene_gini_coeff(adata, layer:str = None):
         gini_list.append( 1 - (2.0 * (rank*x).sum() + s)/(n*s) )
 
     adata.var['gini_coefficient'] = gini_list
+
+    if groups_col != None:
+        groups = adata.obs[groups_col].unique()
+        print('Gini: computing groups data:', end=' ')
+        for i,gc in enumerate(groups):
+            print(i, end=' ')
+            if layer != None:
+                X_ = adata[adata.obs[groups_col]==gc,:].layers[layer]
+            else:
+                X_ = adata[adata.obs[groups_col]==gc,:].X
+            gini_list = []
+            for i in range(X_.shape[1]):
+                x = np.abs(X_[:,i])
+                n = len(x)
+                s = x.sum()
+                rank = np.argsort(np.argsort(-x))
+                gini_list.append( 1 - (2.0 * (rank*x).sum() + s)/(n*s) )
+            adata.var['gini_coefficient_'+str(gc)] = gini_list
+        print('')
     return adata
 
 def uclustering_cv_stb_gini(adata, cl_cols:list = [], scaler_object = None, nearestNeighbors_object = None, louvain_object = None, resolution:float = 1):
@@ -306,6 +304,28 @@ def tost(adata, layer:str = None, class_col:str = None, combinations_list:list =
 
     return aux_tost
 
+def pooled_tost(adata, layer:str = None, class_col:str = None, combinations_list:list = None, vars_list:str = [], groups_col:str = None, method:str='fisher', cohens_d:float = .5, is_parametric:bool = False, is_paired:bool = False, correct_fdr:bool = True):
+    if groups_col == None:
+        raise Exception("Pooled TOST requires a groups_col argument, with, at least, two different groups to be combined.")
+    aux_tost = []
+
+    if combinations_list == None:
+        combinations_list = list(itertools.combinations(aux[class_col].unique(), 2))
+
+    for gp in adata.obs[groups_col].unique():
+        aux_tost.append(tost(adata[adata.obs[groups_col]==gp], layer=layer, class_col=class_col, combinations_list=combinations_list, vars_list=vars_list, cohens_d=cohens_d, is_parametric=is_parametric, is_paired=is_paired, correct_fdr=correct_fdr))
+
+    aux_tost = pd.concat(aux_tost)
+    pv_dict = {idx:[] for idx in aux_tost.index.unique()}
+    statistic_dict = {idx:[] for idx in aux_tost.index.unique()}
+    for idx in aux_tost.index.unique():
+        for g in aux_tost.columns:
+            s,p = combine_pvalues(aux_tost.loc[idx,g], method=method)
+            pv_dict[idx].append(p)
+            statistic_dict[idx].append(s)
+
+    return pd.DataFrame(pv_dict, index=aux_tost.columns).T, pd.DataFrame(statistic_dict, index=aux_tost.columns).T
+
 
 def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitness_function:str = 'minimize_outliers', fitness_function_model = None, y:str = None, suppress_warnings:bool = False):
     if layer != None:
@@ -335,7 +355,8 @@ def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitn
                 clf = fitness_function_model
             else:
                 clf = SVC(class_weight='balanced')
-                clf.fit(X_[:, np.where( solution )[0]], y_)
+
+            clf.fit(X_[:, np.where( solution )[0]], y_)
 
             score_ = clf.score(X_[:, np.where( solution )[0]], y_)
 
@@ -350,7 +371,8 @@ def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitn
                 clf = fitness_function_model
             else:
                 clf = SVC(class_weight='balanced')
-                clf.fit(X_[:, np.where( solution )[0]], y_)
+
+            clf.fit(X_[:, np.where( solution )[0]], y_)
 
             y_p = clf.predict(X_[:, np.where( solution )[0]])
             score_ = f1_score(y_, y_p, average='weighted')
@@ -366,7 +388,8 @@ def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitn
                 clf = fitness_function_model
             else:
                 clf = SVC(class_weight='balanced', probability=True)
-                clf.fit(X_[:, np.where( solution )[0]], y_)
+
+            clf.fit(X_[:, np.where( solution )[0]], y_)
 
             lb = LabelBinarizer()
             y_p = clf.predict_proba(X_[:, np.where( solution )[0]])

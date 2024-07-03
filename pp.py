@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import anndata as ad
 
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, PowerTransformer, QuantileTransformer
 from sklearn.neighbors import NearestNeighbors
 from sknetwork.clustering import Louvain
 import umap
@@ -72,7 +72,7 @@ def create_groups(adata, layer:str = None, study_col:str = None,  scaler_object 
         x_umap = umap_object.fit_transform(cl_X)
         um1.extend(x_umap[:,0].tolist())
         um2.extend(x_umap[:,1].tolist())
-
+ 
     else:
         for i,st_col in enumerate(adata.obs[study_col].unique()):
             if nearestNeighbors_object == None:
@@ -191,7 +191,7 @@ def transform_exprs_Microarray(X, trns_method:str = 'quantile' ):
     """
     if isinstance(trns_method, str):
         if trns_method == 'quantile':
-            return QuantileTransformer().fit_transform(X.T).T
+            return QuantileTransformer(output_distribution='normal').fit_transform(X.T).T
         elif trns_method == 'power':
             return PowerTransformer().fit_transform(X.T).T
         else:

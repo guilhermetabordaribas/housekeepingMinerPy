@@ -9,10 +9,11 @@ from matplotlib.gridspec import GridSpec
 from matplotlib import colors
 import seaborn as sns
 from statannotations.Annotator import Annotator
+from adjustText import adjust_text
 from scipy.stats import pearsonr, false_discovery_control
 import scipy.cluster.hierarchy as sch
 
-def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='pool_mean', hue:str = 'uclustering_cv_stb_labels', palette:str = None, legend:bool = False, figsize:tuple = (8.35*2,8.35), median_line:bool = True):
+def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='pool_mean', hue:str = 'uclustering_cv_stb_labels', palette:str = None, legend:bool = False, figsize:tuple = (8.35*2,8.35), median_line:bool = True, ann_genes:list = None):
     fig = plt.figure(figsize=figsize)
 
     gs = fig.add_gridspec(3,1)
@@ -38,11 +39,13 @@ def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:st
     ax_y_bar3 = fig.add_subplot(gs_bottom[0,2])
     ax_y_violin3 = fig.add_subplot(gs_bottom[1,2])
 
-    hue_order = adata.var[hue].unique()
+
     if hue == None:
         palette = None
         cmap = None
+        hue_order = None
     else:
+        hue_order = adata.var[hue].unique()
         cmap = plt.get_cmap(palette, len(hue_order))
         cmap = [colors.to_hex(cmap(i)) for i in range(len(hue_order))]
         cmap = dict(zip(hue_order,cmap))
@@ -173,6 +176,22 @@ def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:st
         ax_clu3.axvline(np.median(adata.var[z]), ls='--', lw=1,color='black')
         ax_clu3.axhline(np.median(adata.var[x]), ls='--', lw=1, color='black')
         ax_y_violin3.axhline(np.median(adata.var[x]), ls='--', lw=1, color='black')
+
+    if ann_genes != None:
+        texts = []
+        for l_,x_,y_ in adata.var.loc[ann_genes, [x, y]].reset_index().values:
+            texts.append(ax_clu.text(x_, y_, l_,  va='center',ha='center', fontsize=12, style='italic'))
+        adjust_text(texts, ax=ax_clu, arrowprops=dict(arrowstyle="-", color='k', lw=1.1, alpha=.95), expand=(2, 2))
+
+        texts2 = []
+        for l_,x_,y_ in adata.var.loc[ann_genes, [y, z]].reset_index().values:
+            texts2.append(ax_clu2.text(x_, y_, l_,  va='center',ha='center', fontsize=12, style='italic'))
+        adjust_text(texts2, ax=ax_clu2, arrowprops=dict(arrowstyle="-", color='k', lw=1.1, alpha=.95), expand=(2, 2))
+
+        texts3 = []
+        for l_,x_,y_ in adata.var.loc[ann_genes, [z, x]].reset_index().values:
+            texts3.append(ax_clu3.text(x_, y_, l_,  va='center',ha='center', fontsize=12, style='italic'))
+        adjust_text(texts3, ax=ax_clu3, arrowprops=dict(arrowstyle="-", color='k', lw=1.1, alpha=.95), expand=(2, 2))
 
     return None
 
