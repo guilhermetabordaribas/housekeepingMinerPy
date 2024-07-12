@@ -266,7 +266,9 @@ def plot_corr(adata, layer:str = None, r_pearson_lim:float = 0.5, p_value_lim:fl
     ax.set_axisbelow(True)
 
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles=np.array(handles)[[1,2,4,5]].tolist(), labels=np.array(labels)[[1,2,4,5]].tolist(), bbox_to_anchor=bbox_to_anchor, ncol=2)
+    remove_labels = [labels.index('R'), labels.index('pvalue')]
+    keep_labels = [l for l in range(len(labels)) if l not in remove_labels]
+    ax.legend(handles=np.array(handles)[keep_labels].tolist(), labels=np.array(labels)[keep_labels].tolist(), bbox_to_anchor=bbox_to_anchor, ncol=2)
 
     # barplot
     data = aux[aux.R==r_gt].groupby('Gene_name_x').count().loc[original_ticks,:].reset_index()

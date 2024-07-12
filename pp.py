@@ -72,7 +72,7 @@ def create_groups(adata, layer:str = None, study_col:str = None,  scaler_object 
         x_umap = umap_object.fit_transform(cl_X)
         um1.extend(x_umap[:,0].tolist())
         um2.extend(x_umap[:,1].tolist())
- 
+
     else:
         for i,st_col in enumerate(adata.obs[study_col].unique()):
             if nearestNeighbors_object == None:
@@ -259,8 +259,32 @@ def transform_exprs(adata, layer:str = None, groups_col:str = None, trns_dict:di
 
     return adata
 
+# Scikit-leraning alike functions
+class TMM_transformer(BaseEstimator, TransformerMixin):
+    def fit(self, X, y=None):
+        return self
+    def transform(self, X, y=None):
+        X_ = X.copy()
+        tmm_ = tmm(X_.T).T
+        return tmm_
 
+class GeTMM_transformer(BaseEstimator, TransformerMixin):
+    def __init__(self, gene_len):
+        self.gene_len = gene_len
+    def fit(self, X, y=None):
+        return self
+    def transform(self, X, y=None):
+        X_ = X.copy()
+        getmm_ = getmm(X_.T, self.gene_len).T
+        return getmm_
 
+class MRN_transformer(BaseEstimator, TransformerMixin):
+    def fit(self, X, y=None):
+        return self
+    def transform(self, X, y=None):
+        X_ = X.copy()
+        mrn_ = mrn(X_.T).T
+        return mrn_
 
 # All code above is from another package conorm https://gitlab.com/georgy.m/conorm
 def tmm_norm_factors(data, trim_lfc=0.3, trim_mag=0.05, index_ref=None):
