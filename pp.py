@@ -7,6 +7,7 @@ import anndata as ad
 
 from sklearn.preprocessing import StandardScaler, PowerTransformer, QuantileTransformer
 from sklearn.neighbors import NearestNeighbors
+from sklearn.base import BaseEstimator, TransformerMixin
 from sknetwork.clustering import Louvain
 import umap
 

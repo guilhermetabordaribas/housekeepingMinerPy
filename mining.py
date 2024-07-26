@@ -486,8 +486,8 @@ def set_boruta_selection(adata, layer:str = None, class_col:str = None, scaler =
         y_ = adata.obs[class_col].values
 
     results = []
-    for i,set in enumerate(set_balance_resample(y_, n_set=n_set, random_state=random_state, sample_size=sample_size, replace=replace)):
-        results.append(boruta_selection(adata, layer=layer, rf_model=rf_model, class_col=class_col, class_weight=class_weight, scaler=scaler, random_state=random_state+i))
+    for i,set_ in enumerate(set_balance_resample(y_, n_set=n_set, random_state=random_state, sample_size=sample_size, replace=replace)):
+        results.append(boruta_selection(adata[set_, :], layer=layer, rf_model=rf_model, class_col=class_col, class_weight=class_weight, scaler=scaler, random_state=random_state+i))
 
     return results
 
