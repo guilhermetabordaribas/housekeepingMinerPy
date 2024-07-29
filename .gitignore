@@ -1,3 +1,4 @@
 .ipynb_checkpoints/testing_pkg_hkgMiner-checkpoint.ipynb
 __pycache__/*
 .gitignore
+~*
