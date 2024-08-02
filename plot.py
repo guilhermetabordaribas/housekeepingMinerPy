@@ -13,7 +13,7 @@ from adjustText import adjust_text
 from scipy.stats import pearsonr, false_discovery_control
 import scipy.cluster.hierarchy as sch
 
-def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='pool_mean', hue:str = 'uclustering_cv_stb_labels', palette:str = None, legend:bool = False, figsize:tuple = (8.35*2,8.35), median_line:bool = True, ann_genes:list = None):
+def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='pool_mean', hue:str = 'uclustering_cv_stb_labels', palette:str = None, legend:bool = False, figsize:tuple = (8.35*2,8.35), median_line:bool = True, ann_genes:list = None, highlight_group:int=None):
     fig = plt.figure(figsize=figsize)
 
     gs = fig.add_gridspec(3,1)
@@ -51,7 +51,11 @@ def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:st
         cmap = dict(zip(hue_order,cmap))
 
     # TOP grid
-    sns.scatterplot(x=x, y=y, hue=hue, palette=cmap, data=adata.var, ax=ax_clu)
+    if isinstance(highlight_group, int):
+        sns.scatterplot(x=x, y=y, hue=hue, edgecolor=None, palette=cmap, data=adata.var, ax=ax_clu)
+        sns.scatterplot(x=x, y=y, hue=hue, edgecolor='black',palette=cmap, data=adata.var[adata.var.uclustering_cv_stb_labels==highlight_group], ax=ax_clu)
+    else:
+        sns.scatterplot(x=x, y=y, hue=hue, palette=cmap, data=adata.var, ax=ax_clu)
     ax_clu.get_legend().set_visible(legend)
     ax_clu.spines[['right', 'top']].set_visible(False)
 
@@ -89,7 +93,11 @@ def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:st
     ax_y_violin.axvline(arg_max, ls=':', lw=1,color='gray')
 
     # Middle grid
-    sns.scatterplot(x=y, y=z, hue=hue, palette=cmap, data=adata.var, ax=ax_clu2)
+    if isinstance(highlight_group, int):
+        sns.scatterplot(x=y, y=z, hue=hue, edgecolor=None, palette=cmap, data=adata.var, ax=ax_clu2)
+        sns.scatterplot(x=y, y=z, hue=hue, edgecolor='black', palette=cmap, data=adata.var[adata.var.uclustering_cv_stb_labels==highlight_group], ax=ax_clu2)
+    else:
+        sns.scatterplot(x=y, y=z, hue=hue, palette=cmap, data=adata.var, ax=ax_clu2)
     ax_clu2.get_legend().set_visible(legend)
     ax_clu2.spines[['right', 'top']].set_visible(False)
 
@@ -127,7 +135,11 @@ def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:st
     ax_y_violin2.axvline(arg_max, ls=':', lw=1,color='gray')
 
     # Bottom grid
-    sns.scatterplot(x=z, y=x, hue=hue, palette=cmap, data=adata.var, ax=ax_clu3)
+    if isinstance(highlight_group, int):
+        sns.scatterplot(x=z, y=x, hue=hue, edgecolor=None, palette=cmap, data=adata.var, ax=ax_clu3)
+        sns.scatterplot(x=z, y=x, hue=hue, edgecolor='black', palette=cmap, data=adata.var[adata.var.uclustering_cv_stb_labels==highlight_group], ax=ax_clu3)
+    else:
+        sns.scatterplot(x=z, y=x, hue=hue, palette=cmap, data=adata.var, ax=ax_clu3)
     ax_clu3.get_legend().set_visible(legend)
     ax_clu3.spines[['right', 'top']].set_visible(False)
 
