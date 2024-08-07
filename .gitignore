@@ -2,3 +2,5 @@
 __pycache__/*
 .gitignore
 ~*
+.ipynb_checkpoints/*
+.ipynb_checkpoints/hkg_paper_code_analysis-checkpoint.ipynb
