@@ -13,7 +13,10 @@ from adjustText import adjust_text
 from scipy.stats import pearsonr, false_discovery_control
 import scipy.cluster.hierarchy as sch
 
-def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='pool_mean', hue:str = 'uclustering_cv_stb_labels', palette:str = None, legend:bool = False, figsize:tuple = (8.35*2,8.35), median_line:bool = True, ann_genes:list = None, highlight_group:int=None):
+def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='pool_mean', hue:str = 'uclustering_cv_stb_labels', palette:str = None, legend:bool = False, figsize:tuple = (8.35*2,8.35), median_line:bool = True, ann_genes:list = None, highlight_group:int=None, savefig:dict=None):
+    """
+    savefig example {'fname':'/mnt/d/housekeeping_genes/draft/entropy_conservative_sites_v2.pdf', 'format':'pdf', 'dpi':300}
+    """
     fig = plt.figure(figsize=figsize)
 
     gs = fig.add_gridspec(3,1)
@@ -205,9 +208,11 @@ def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:st
             texts3.append(ax_clu3.text(x_, y_, l_,  va='center',ha='center', fontsize=12, style='italic'))
         adjust_text(texts3, ax=ax_clu3, arrowprops=dict(arrowstyle="-", color='k', lw=1.1, alpha=.95), expand=(2, 2))
 
+        if (savefig!=None) and isinstance(savefig, dict):
+            fig.savefig(**savefig)
     return None
 
-def plot_corr(adata, layer:str = None, r_pearson_lim:float = 0.5, p_value_lim:float = 0.05, correct_fdr:bool = True, figsize:tuple = (8.35*2/3, 8.35*2/3), bbox_to_anchor:tuple=(1.2, 1)):
+def plot_corr(adata, layer:str = None, r_pearson_lim:float = 0.5, p_value_lim:float = 0.05, correct_fdr:bool = True, figsize:tuple = (8.35*2/3, 8.35*2/3), bbox_to_anchor:tuple=(1.2, 1), color_threshold:float=0, savefig:dict=None):
     fig = plt.figure(figsize=figsize)
     gs = GridSpec(2, 2, width_ratios=[8, 1], height_ratios=[1,8], wspace=.02, hspace=.02)
     ax = fig.add_subplot(gs[1,0])
@@ -221,7 +226,7 @@ def plot_corr(adata, layer:str = None, r_pearson_lim:float = 0.5, p_value_lim:fl
     original_order = aux.columns
 
     # Claculate the linkage by correlation between genes
-    Z = sch.linkage(aux.T.astype(float).values, metric='correlation', method='average')
+    Z = sch.linkage(aux.T.astype(float).values, metric='correlation', method='average', optimal_ordering=True)
 
     # Calculate Pearson corralations and p-values
     cols_ = list(itertools.combinations_with_replacement(original_order,2, ))
@@ -244,10 +249,12 @@ def plot_corr(adata, layer:str = None, r_pearson_lim:float = 0.5, p_value_lim:fl
     aux = pd.concat([aux, aux_2])
 
     # Dendrogram
-    dn = sch.dendrogram(Z, orientation='right', no_labels=True, color_threshold=0, above_threshold_color='black',  ax=ax_y_dn)
+    dn = sch.dendrogram(Z, orientation='right', no_labels=True, color_threshold=color_threshold, above_threshold_color='black',  ax=ax_y_dn)
     ax_y_dn.spines[['left', 'bottom', 'right', 'top']].set_visible(False)
     ax_y_dn.grid(False)
-    ax_y_dn.set_xticks([], [])
+    if color_threshold > 0:
+        ax_y_dn.axvline(color_threshold, color='gray', ls='--', lw=.7)
+    # ax_y_dn.set_xticks([], [])
 
     order = dn['leaves']
     original_ticks = np.array(dn['icoord'])[np.where(np.array(dn['dcoord'])==0)]
@@ -292,6 +299,9 @@ def plot_corr(adata, layer:str = None, r_pearson_lim:float = 0.5, p_value_lim:fl
     ax_y_bar.set_xlabel(None)
     ax_y_bar.spines[['left','right', 'top', 'bottom']].set_visible(False)
     ax_y_bar.set_ylabel('Qty.')
+
+    if (savefig!=None) and isinstance(savefig, dict):
+        fig.savefig(**savefig)
 
     # cols_ = list(itertools.combinations_with_replacement(aux.columns,2, ))
     # P_list = []
