@@ -99,6 +99,8 @@ def stability_cv(adata, layer:str = None, groups_col:str = None, return_stb_cv_p
     groups_col: string
         groups_col to perform the stratified calculation of cv. It must be a column at adata.obs annotations.
         If None, the calculation will not give the same weight for each group. The group with more samples will have greater weight. The name of column will be simple_cv instead pooled_cv.
+    return_stb_cv_per_group: bool
+        If True, columns of cv-stability for each group will be stored in a adata.var column.
 
     Returns
     -------
@@ -146,7 +148,26 @@ def stability_cv(adata, layer:str = None, groups_col:str = None, return_stb_cv_p
 
 def gene_gini_coeff(adata, layer:str = None, groups_col:str = None):
     """
+    Calculate the Gini coefficient (cv) of each gene.
     G = 1 + 1/n - 2*sum_i(rank_k*x_i) / n*sum_i(x_i)
+
+    Parameters
+    ----------
+    adata : Anndata
+    layer : string, optional
+        layer of AnnData object to be used to transform.
+        If layer is not informed, adata.X will be used.
+    groups_col: string
+        We recomend use None, since Gini is ordenaded and batches doens't affects.
+        groups_col to perform the stratified calculation of Gini. It must be a column at adata.obs annotations. Since there is no stabilished way to pool Gini, only the valus per group is calcluate, but not a pooled one.
+        If None, the calculation will not give the same weight for each group. The group with more samples will have greater weight. The name of column will be simple_cv instead pooled_cv.
+
+    Returns
+    -------
+    adata
+        Return the adata with additional column ['gini_coefficient'].
+    """
+
     """
 
     if layer != None:
@@ -185,6 +206,33 @@ def gene_gini_coeff(adata, layer:str = None, groups_col:str = None):
     return adata
 
 def uclustering_cv_stb_gini(adata, cl_cols:list = [], scaler_object = None, nearestNeighbors_object = None, louvain_object = None, resolution:float = 1):
+    """
+    Calculate unsupervised clusters by Louvain algorithm based columns set in cl_cols list. Those columns are used as features to perform clusterization.
+
+    Parameters
+    ----------
+    adata : Anndata
+    cl_cols : list, optional
+        If a empty list is informed, it will get automatically the columns pool_cv, pool_stability_cv, pool_mean, gini_coefficient
+        If layer is not informed, adata.X will be used.
+    groups_col: string
+        We recomend use None, since Gini is ordenaded and batches doens't affects.
+        groups_col to perform the stratified calculation of Gini. It must be a column at adata.obs annotations. Since there is no stabilished way to pool Gini, only the valus per group is calcluate, but not a pooled one.
+        If None, the calculation will not give the same weight for each group. The group with more samples will have greater weight. The name of column will be simple_cv instead pooled_cv.
+    scaler_object: scikit-learning preprocessing scaler_object
+        It is optional to fit and transform the data before clustering. If None, no transformation is applied.
+    nearestNeighbors_object: scikit-learning NearestNeighbors object.
+        It is optional to calcluate closest neighbors. If None, a default sklearn.neighbors.NearestNeighbors is applied.
+    louvain_object: scikit-network Louvain object.
+        It is optional to clustering. If None, a default sknetwork.clustering.Louvain is applied.
+    resolution: float
+        resolution parameter sknetwork.clustering.Louvain object when louvain_object==None.
+
+    Returns
+    -------
+    adata
+        Return the adata with additional column ['gini_coefficient'].
+    """
 
     if nearestNeighbors_object == None:
         nearestNeighbors_object = NearestNeighbors()
@@ -208,8 +256,11 @@ def uclustering_cv_stb_gini(adata, cl_cols:list = [], scaler_object = None, near
         elif ('simple_mean' in adata.var.columns):
             cl_cols.append('simple_mean')
 
+        if ('gini_coefficient' in adata.var.columns):
+            cl_cols.append('gini_coefficient')
+
     if not cl_cols:
-        raise Warning("You inform a empty 'cl_col' argument, but no columns for cv, stability_cv or mean were found. Please, consider run 'stability_cv()' and 'exprs_cv()' funciotns")
+        raise Warning("You inform a empty 'cl_col' argument, but no columns for cv, stability_cv, mean or Gini were found. Please, consider run 'stability_cv()', 'exprs_cv()' and 'gene_gini_coeff()' funciotns")
 
     cl_X = adata.var[cl_cols]
 
@@ -224,6 +275,24 @@ def uclustering_cv_stb_gini(adata, cl_cols:list = [], scaler_object = None, near
     return adata
 
 def sclustering_cv_stb_gini(adata, cl_cols:list = [], scaler_object = None, kMeans = None):
+    """
+    Calculate supervised clustering by Kmeans algorithm (by default) based columns set in cl_cols list. Those columns are used as features to perform clusterization.
+
+    Parameters
+    ----------
+    adata : Anndata
+    cl_cols : list, optional
+        If a empty list is informed, it will get automatically the columns pool_cv, pool_stability_cv, pool_mean, gini_coefficient
+    scaler_object: scikit-learning preprocessing scaler_object
+        It is optional to fit and transform the data before clustering. If None, no transformation is applied.
+    kMeans: scikit-learning KMeans object.
+        It is optional to calcluate KMeans. If None, a default ssklearn.cluster.KMeans is applied.
+
+    Returns
+    -------
+    adata
+        Return the adata with additional column ['gini_coefficient'].
+    """
 
     if kMeans == None:
         kMeans = kMeans()
