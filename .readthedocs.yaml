@@ -1,0 +1,13 @@
+version: 0.0.1
+
+build:
+
+  os: ubuntu-22.04.3
+
+  tools:
+
+    python: "3.12"
+
+sphinx:
+
+  configuration: docs/source/conf.py
