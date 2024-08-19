@@ -326,7 +326,35 @@ def sclustering_cv_stb_gini(adata, cl_cols:list = [], scaler_object = None, kMea
 
     return adata
 
-def tost(adata, layer:str = None, class_col:str = None, combinations_list:list = None, vars_list:str = [], cohens_d:float = .5, is_parametric:bool = False, is_paired:bool = False, correct_fdr:bool = True):
+def tost(adata, layer:str = None, class_col:str = None, combinations_list:list = None, cohens_d:float = .5, is_parametric:bool = False, is_paired:bool = False, correct_fdr:bool = True):
+    """
+    Perfom Two-One-Sided-Test to test for equivalence between two conditions.
+
+    Parameters
+    ----------
+    adata : Anndata
+    layer : string, optional
+        layer of AnnData object to be used to transform.
+        If layer is not informed, adata.X will be used.
+    class_col: str
+        It is the column on adata.obs where the classes for comparasion are described.
+    combinations_list: list
+        It is a list of tuple of combination to be tested.
+        If None is informed, all pairwise combinations of different classes will be tested.
+    cohens_d: float
+        Cohens d value. It is the maximum/minimum percentage of standard deviation to be considered equivalent.
+    is_parametric: bool
+        If True peform a parametric test (T-test), if False a non-parametric is performed. For paired non-parametric, wilcoxon is applied, otherwise brunnermunzel test is applied.
+    is_paired: bool
+        It True a paired T-test is applied in parametric option, otherwise a wilcoxon is applied.
+    correct_fdr: bool
+        It True a False Discovery rate is calculated based on Benjamini-Hochberg method.
+
+    Returns
+    -------
+    adata
+        Return a table with all adjusted p-values.
+    """
     if class_col == None:
         raise Exception("TOST requires a class_col argument, with, at least, two different classes.")
 
@@ -371,7 +399,37 @@ def tost(adata, layer:str = None, class_col:str = None, combinations_list:list =
 
     return aux_tost
 
-def pooled_tost(adata, layer:str = None, class_col:str = None, combinations_list:list = None, vars_list:str = [], groups_col:str = None, method:str='fisher', cohens_d:float = .5, is_parametric:bool = False, is_paired:bool = False, correct_fdr:bool = True):
+def pooled_tost(adata, layer:str = None, class_col:str = None, combinations_list:list = None, groups_col:str = None, method:str='fisher', cohens_d:float = .5, is_parametric:bool = False, is_paired:bool = False, correct_fdr:bool = True):
+    """
+    Perfom Two-One-Sided-Test to test for equivalence between two conditions by groups and then the p-values are pooled.
+
+    Parameters
+    ----------
+    adata : Anndata
+    layer : string, optional
+        layer of AnnData object to be used to transform.
+        If layer is not informed, adata.X will be used.
+    class_col: str
+        It is the column on adata.obs where the classes for comparasion are described.
+    combinations_list: list
+        It is a list of tuple of combination to be tested.
+        If None is informed, all pairwise combinations of different classes will be tested.
+    groups_col: str
+        It is the column on adata.obs where the groups for pooling the partial p-values.
+    cohens_d: float
+        Cohens d value. It is the maximum/minimum percentage of standard deviation to be considered equivalent.
+    is_parametric: bool
+        If True peform a parametric test (T-test), if False a non-parametric is performed. For paired non-parametric, wilcoxon is applied, otherwise brunnermunzel test is applied.
+    is_paired: bool
+        It True a paired T-test is applied in parametric option, otherwise a wilcoxon is applied.
+    correct_fdr: bool
+        It True a False Discovery rate is calculated based on Benjamini-Hochberg method.
+
+    Returns
+    -------
+    adata
+        Return a table with all pooled adjusted p-values.
+    """
     if groups_col == None:
         raise Exception("Pooled TOST requires a groups_col argument, with, at least, two different groups to be combined.")
     aux_tost = []
@@ -380,7 +438,7 @@ def pooled_tost(adata, layer:str = None, class_col:str = None, combinations_list
         combinations_list = list(itertools.combinations(aux[class_col].unique(), 2))
 
     for gp in adata.obs[groups_col].unique():
-        aux_tost.append(tost(adata[adata.obs[groups_col]==gp], layer=layer, class_col=class_col, combinations_list=combinations_list, vars_list=vars_list, cohens_d=cohens_d, is_parametric=is_parametric, is_paired=is_paired, correct_fdr=correct_fdr))
+        aux_tost.append(tost(adata[adata.obs[groups_col]==gp], layer=layer, class_col=class_col, combinations_list=combinations_list, cohens_d=cohens_d, is_parametric=is_parametric, is_paired=is_paired, correct_fdr=correct_fdr))
 
     aux_tost = pd.concat(aux_tost)
     pv_dict = {idx:[] for idx in aux_tost.index.unique()}

@@ -71,7 +71,6 @@
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="#housekeepingminerpy-pp-module">housekeepingMinerPy.pp module</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#housekeepingMinerPy.pp.GeTMM_transformer"><code class="docutils literal notranslate"><span class="pre">GeTMM_transformer</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#housekeepingMinerPy.pp.MRN_transformer"><code class="docutils literal notranslate"><span class="pre">MRN_transformer</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#housekeepingMinerPy.pp.TMM_transformer"><code class="docutils literal notranslate"><span class="pre">TMM_transformer</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#housekeepingMinerPy.pp.create_groups"><code class="docutils literal notranslate"><span class="pre">create_groups()</span></code></a></li>
@@ -351,25 +350,10 @@ If None, the calculation will not give the same weight for each group. The group
 <h2>housekeepingMinerPy.pp module<a class="headerlink" href="#housekeepingminerpy-pp-module" title="Permalink to this heading"></a></h2>
 <blockquote>
 <div><span class="target" id="module-housekeepingMinerPy.pp"></span><dl class="py class">
-<dt class="sig sig-object py" id="housekeepingMinerPy.pp.GeTMM_transformer">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">housekeepingMinerPy.pp.</span></span><span class="sig-name descname"><span class="pre">GeTMM_transformer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">gene_len</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#housekeepingMinerPy.pp.GeTMM_transformer" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseEstimator</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">TransformerMixin</span></code></p>
-<dl class="py method">
-<dt class="sig sig-object py" id="housekeepingMinerPy.pp.GeTMM_transformer.fit">
-<span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#housekeepingMinerPy.pp.GeTMM_transformer.fit" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="housekeepingMinerPy.pp.GeTMM_transformer.transform">
-<span class="sig-name descname"><span class="pre">transform</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#housekeepingMinerPy.pp.GeTMM_transformer.transform" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
 <dt class="sig sig-object py" id="housekeepingMinerPy.pp.MRN_transformer">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">housekeepingMinerPy.pp.</span></span><span class="sig-name descname"><span class="pre">MRN_transformer</span></span><a class="headerlink" href="#housekeepingMinerPy.pp.MRN_transformer" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseEstimator</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">TransformerMixin</span></code></p>
+<p>MRN adaptation to be used in scikit-learning pipeline.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="housekeepingMinerPy.pp.MRN_transformer.fit">
 <span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#housekeepingMinerPy.pp.MRN_transformer.fit" title="Permalink to this definition"></a></dt>
@@ -386,6 +370,7 @@ If None, the calculation will not give the same weight for each group. The group
 <dt class="sig sig-object py" id="housekeepingMinerPy.pp.TMM_transformer">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">housekeepingMinerPy.pp.</span></span><span class="sig-name descname"><span class="pre">TMM_transformer</span></span><a class="headerlink" href="#housekeepingMinerPy.pp.TMM_transformer" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseEstimator</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">TransformerMixin</span></code></p>
+<p>TMM adaptation to be used in scikit-learning pipeline.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="housekeepingMinerPy.pp.TMM_transformer.fit">
 <span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#housekeepingMinerPy.pp.TMM_transformer.fit" title="Permalink to this definition"></a></dt>
@@ -452,7 +437,7 @@ If layer is not informed, adata.X will be used.</p></li>
 <dl class="py function">
 <dt class="sig sig-object py" id="housekeepingMinerPy.pp.mrn">
 <span class="sig-prename descclassname"><span class="pre">housekeepingMinerPy.pp.</span></span><span class="sig-name descname"><span class="pre">mrn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_norm_factors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#housekeepingMinerPy.pp.mrn" title="Permalink to this definition"></a></dt>
-<dd><p>Normalize counts matrix by Median of Ratios</p>
+<dd><p>Normalize counts matrix by Median of Ratios. <strong>This function is part of the project https://gitlab.com/georgy.m/conorm. We used the function within our code in favor of usability</strong></p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -473,7 +458,7 @@ either pandas DataFrame or an numpy matrix.</p></li>
 <dl class="py function">
 <dt class="sig sig-object py" id="housekeepingMinerPy.pp.mrn_norm_factors">
 <span class="sig-prename descclassname"><span class="pre">housekeepingMinerPy.pp.</span></span><span class="sig-name descname"><span class="pre">mrn_norm_factors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#housekeepingMinerPy.pp.mrn_norm_factors" title="Permalink to this definition"></a></dt>
-<dd><p>Compute Median of Ratio norm factors.</p>
+<dd><p>Compute Median of Ratio norm factors. <strong>This function is part of the project https://gitlab.com/georgy.m/conorm. We used the function within our code in favor of usability</strong></p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>data</strong> (<em>array_like</em>) – Counts dataframe to normalize (rows are genes). Most often can be
@@ -491,7 +476,7 @@ either pandas DataFrame or an numpy matrix.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="housekeepingMinerPy.pp.tmm">
 <span class="sig-prename descclassname"><span class="pre">housekeepingMinerPy.pp.</span></span><span class="sig-name descname"><span class="pre">tmm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trim_lfc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trim_mag</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index_ref</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">return_norm_factors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#housekeepingMinerPy.pp.tmm" title="Permalink to this definition"></a></dt>
-<dd><p>Normalize counts matrix by Trimmed Means of M-values (TMM).</p>
+<dd><p>Normalize counts matrix by Trimmed Means of M-values (TMM). <strong>This function is part of the project https://gitlab.com/georgy.m/conorm. We used the function within our code in favor of usability</strong></p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -516,7 +501,7 @@ algorithm. The default is None.</p></li>
 <dl class="py function">
 <dt class="sig sig-object py" id="housekeepingMinerPy.pp.tmm_norm_factors">
 <span class="sig-prename descclassname"><span class="pre">housekeepingMinerPy.pp.</span></span><span class="sig-name descname"><span class="pre">tmm_norm_factors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trim_lfc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">trim_mag</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">index_ref</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#housekeepingMinerPy.pp.tmm_norm_factors" title="Permalink to this definition"></a></dt>
-<dd><p>Compute Trimmed Means of M-values norm factors.</p>
+<dd><p>Compute Trimmed Means of M-values norm factors. <strong>This function is part of the project https://gitlab.com/georgy.m/conorm. We used the function within our code in favor of usability</strong></p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">

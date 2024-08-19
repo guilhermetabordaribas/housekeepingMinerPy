@@ -262,6 +262,9 @@ def transform_exprs(adata, layer:str = None, groups_col:str = None, trns_dict:di
 
 # Scikit-leraning alike functions
 class TMM_transformer(BaseEstimator, TransformerMixin):
+    """
+    TMM adaptation to be used in scikit-learning pipeline.
+    """
     def fit(self, X, y=None):
         return self
     def transform(self, X, y=None):
@@ -269,17 +272,10 @@ class TMM_transformer(BaseEstimator, TransformerMixin):
         tmm_ = tmm(X_.T).T
         return tmm_
 
-class GeTMM_transformer(BaseEstimator, TransformerMixin):
-    def __init__(self, gene_len):
-        self.gene_len = gene_len
-    def fit(self, X, y=None):
-        return self
-    def transform(self, X, y=None):
-        X_ = X.copy()
-        getmm_ = getmm(X_.T, self.gene_len).T
-        return getmm_
-
 class MRN_transformer(BaseEstimator, TransformerMixin):
+    """
+    MRN adaptation to be used in scikit-learning pipeline.
+    """
     def fit(self, X, y=None):
         return self
     def transform(self, X, y=None):
@@ -290,7 +286,7 @@ class MRN_transformer(BaseEstimator, TransformerMixin):
 # All code above is from another package conorm https://gitlab.com/georgy.m/conorm
 def tmm_norm_factors(data, trim_lfc=0.3, trim_mag=0.05, index_ref=None):
     """
-    Compute Trimmed Means of M-values norm factors.
+    Compute Trimmed Means of M-values norm factors. **This function is part of the project https://gitlab.com/georgy.m/conorm. We used the function within our code in favor of usability**
 
     Parameters
     ----------
@@ -350,7 +346,7 @@ def tmm_norm_factors(data, trim_lfc=0.3, trim_mag=0.05, index_ref=None):
 def tmm(data, trim_lfc=0.3, trim_mag=0.05, index_ref=None,
         return_norm_factors=False):
     """
-    Normalize counts matrix by Trimmed Means of M-values (TMM).
+    Normalize counts matrix by Trimmed Means of M-values (TMM). **This function is part of the project https://gitlab.com/georgy.m/conorm. We used the function within our code in favor of usability**
 
     Parameters
     ----------
@@ -383,7 +379,7 @@ def tmm(data, trim_lfc=0.3, trim_mag=0.05, index_ref=None,
 
 def mrn_norm_factors(data):
     """
-    Compute Median of Ratio norm factors.
+    Compute Median of Ratio norm factors. **This function is part of the project https://gitlab.com/georgy.m/conorm. We used the function within our code in favor of usability**
 
     Parameters
     ----------
@@ -413,7 +409,7 @@ def mrn_norm_factors(data):
 
 def mrn(data, return_norm_factors=False):
     """
-    Normalize counts matrix by Median of Ratios
+    Normalize counts matrix by Median of Ratios. **This function is part of the project https://gitlab.com/georgy.m/conorm. We used the function within our code in favor of usability**
 
     Parameters
     ----------
