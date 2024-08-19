@@ -168,8 +168,6 @@ def gene_gini_coeff(adata, layer:str = None, groups_col:str = None):
         Return the adata with additional column ['gini_coefficient'].
     """
 
-    """
-
     if layer != None:
         X_ = adata.layers[layer]
     else:
@@ -216,7 +214,7 @@ def uclustering_cv_stb_gini(adata, cl_cols:list = [], scaler_object = None, near
         If a empty list is informed, it will get automatically the columns pool_cv, pool_stability_cv, pool_mean, gini_coefficient
         If layer is not informed, adata.X will be used.
     groups_col: string
-        We recomend use None, since Gini is ordenaded and batches doens't affects.
+        We recomend use None, since Gini is ordenaded and batches does not affects.
         groups_col to perform the stratified calculation of Gini. It must be a column at adata.obs annotations. Since there is no stabilished way to pool Gini, only the valus per group is calcluate, but not a pooled one.
         If None, the calculation will not give the same weight for each group. The group with more samples will have greater weight. The name of column will be simple_cv instead pooled_cv.
     scaler_object: scikit-learning preprocessing scaler_object
