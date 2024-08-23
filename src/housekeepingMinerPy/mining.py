@@ -567,7 +567,7 @@ def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitn
     return ga_instance.best_solution()
 
 
-def boruta_selection(adata, layer:str = None, class_col:str = None, scaler = None, rf_model = None, class_weight:list = None, random_state:int = 42):
+def boruta_selection(adata, layer:str = None, class_col:str = None, scaler = None, rf_model = None, class_weight:list = None, random_state:int = 42, alpha:float=.05):
     if layer != None:
         X_ = adata.layers[layer]
     else:
@@ -588,7 +588,7 @@ def boruta_selection(adata, layer:str = None, class_col:str = None, scaler = Non
     if rf_model == None:
         rf_model = RandomForestClassifier(class_weight=class_weight)
 
-    feat_selector = BorutaPy(rf_model, n_estimators='auto', verbose=0, random_state=random_state)
+    feat_selector = BorutaPy(rf_model, n_estimators='auto', verbose=0, random_state=random_state, alpha=alpha)
     feat_selector.fit(X_, y_)
 
     feature_ranks = list(zip(adata.var.index,
@@ -604,7 +604,7 @@ def boruta_selection(adata, layer:str = None, class_col:str = None, scaler = Non
             # print('Feature: {:<25} Rank: {},  Keep: {}'.format(feat[0], feat[1], feat[2]))
     return result
 
-def set_boruta_selection(adata, layer:str = None, class_col:str = None, scaler = None,  rf_model = None, random_state:int = 42, class_weight:list = None, n_set:int = 5, sample_size:int = None, replace:bool = False):
+def set_boruta_selection(adata, layer:str = None, class_col:str = None, scaler = None,  rf_model = None, random_state:int = 42, class_weight:list = None, n_set:int = 5, sample_size:int = None, replace:bool = False, alpha:float=.05):
     if class_col == None:
         raise Exception("Boruta feature selection requires a class_col argument, with, at least, two different classes.")
     else:
@@ -612,7 +612,7 @@ def set_boruta_selection(adata, layer:str = None, class_col:str = None, scaler =
 
     results = []
     for i,set_ in enumerate(set_balance_resample(y_, n_set=n_set, random_state=random_state, sample_size=sample_size, replace=replace)):
-        results.append(boruta_selection(adata[set_, :], layer=layer, rf_model=rf_model, class_col=class_col, class_weight=class_weight, scaler=scaler, random_state=random_state+i))
+        results.append(boruta_selection(adata[set_, :], layer=layer, rf_model=rf_model, class_col=class_col, class_weight=class_weight, scaler=scaler, random_state=random_state+i, alpha=alpha))
 
     return results
 
