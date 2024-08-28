@@ -29,3 +29,7 @@ autodoc_mock_imports = ['sknetwork','umap','false_discovery_control','scipy.stat
 
 html_theme = 'sphinx_rtd_theme'#'alabaster'
 html_static_path = ['_static']
+# html_theme_options = {
+#     'logo_only': True,
+# }
+html_logo = "logo.png"
