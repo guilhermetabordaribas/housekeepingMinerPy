@@ -10,7 +10,7 @@ Welcome to housekeepingMinerPy's documentation
 **housekeepingMinerPy** is a Python library for mine housekeeping genes in RNA-seq experiments.
 The package was developed during the paper **Housekeeping Gene Expression Normalization in Transcriptomics Mitigates Data Leakage in Machine Learning Models**.
 
-You can easly calcluate Gini coefficient, coefficient of variation and coefficient of variation o stability of genes. You can cluster similar genes that can be potentially considered control genes. With low variance in different conditions. Bellow is an example of stable genes found in peripheral blood of kidney transplanted patients.
+You can easily calculate the Gini coefficient, coefficient of variation, and coefficient of variation on the stability of genes. You can cluster similar genes that can be potentially considered control genes. With low variance in different conditions. Below is an example of stable genes found in the peripheral blood of kidney-transplanted patients.
 
 .. image:: ex1.png
   :width: 100%
