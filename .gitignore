@@ -1,6 +1,5 @@
 .ipynb_checkpoints/testing_pkg_hkgMiner-checkpoint.ipynb
 __pycache__/*
 .gitignore
-~*
 .ipynb_checkpoints/*
 .ipynb_checkpoints/hkg_paper_code_analysis-checkpoint.ipynb
