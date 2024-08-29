@@ -21,7 +21,7 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.coverage', 'sphinx.ext.napoleon'
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-autodoc_mock_imports = ['sknetwork','umap','false_discovery_control','scipy.stats','hdbscan','pygad','boruta','statannotations','adjustText','numpy']
+autodoc_mock_imports = ['sknetwork','umap','false_discovery_control','scipy.stats','hdbscan','pygad','boruta','statannotations','adjustText']
 
 
 # -- Options for HTML output -------------------------------------------------
