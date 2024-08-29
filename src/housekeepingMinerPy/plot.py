@@ -13,9 +13,40 @@ from adjustText import adjust_text
 from scipy.stats import pearsonr, false_discovery_control
 import scipy.cluster.hierarchy as sch
 
-def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='pool_mean', hue:str = 'uclustering_cv_stb_labels', palette:str = None, legend:bool = False, figsize:tuple = (8.35*2,8.35), median_line:bool = True, ann_genes:list = None, highlight_group:int=None, savefig:dict=None):
+def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='pool_mean', hue:str = 'uclustering_cv_stb_labels', palette:str = None, legend:bool = False, median_line:bool = True, ann_genes:list = None, highlight_group:str=None, figsize:tuple = (8.35*2,8.35), savefig:dict=None):
     """
-    savefig example {'fname':'/mnt/d/housekeeping_genes/draft/entropy_conservative_sites_v2.pdf', 'format':'pdf', 'dpi':300}
+    Plot six main plots combining three variables, for example: coefficient of variance, Gini coefficient and CV of stability. For each line of plot there are a scatterplot and a boxplot. The scatterplot is design with two variable and in each axis a histogram show the distribution of each variable. the second plot is a boxplot with the vatriable from the scatterplot vertical axis splitted in groups. A barplot is in the top of boxplot showing the number of genes is in each group.
+
+    Parameters
+    ----------
+    adata : Anndata
+    x : string
+        Variable to be plotted as the vertical axis on the first row of plots.
+    y : string
+        Variable to be plotted as the vertical axis on the second row of plots.
+    z : string
+        Variable to be plotted as the vertical axis on the third row of plots.
+    hue: string
+        Column to be considered to group by colors in scatterplot and boxplot.
+    pallete: string, optional
+        Name of the matplotlib colormap.
+    legend: bool
+        If True, a legend of hue is displayed on scatterplot.
+    median_line: bool
+        If True, medians of each variable is plotted as dot-points in scatterplot and boxplot.
+    ann_genes: list, optional
+        List of genes that should have their names displayed on the scatterplot.
+    highlight_group: str, optional
+        Name of the group to be highlighted at the scatterplot.
+    figsize: tuple
+        Tuple with the width and height of the figure.
+    savefig: dict, optional
+        Dictionary with arguments for matplotlib.pyplot.savefig. Example: {'fname':'./test.pdf', 'format':'pdf', 'dpi':300}
+
+    Returns
+    -------
+    None
+
     """
     fig = plt.figure(figsize=figsize)
 
@@ -138,7 +169,7 @@ def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:st
     ax_y_violin2.axvline(arg_max, ls=':', lw=1,color='gray')
 
     # Bottom grid
-    if isinstance(highlight_group, int):
+    if isinstance(highlight_group, str):
         sns.scatterplot(x=z, y=x, hue=hue, edgecolor=None, palette=cmap, data=adata.var, ax=ax_clu3)
         sns.scatterplot(x=z, y=x, hue=hue, edgecolor='black', palette=cmap, data=adata.var[adata.var.uclustering_cv_stb_labels==highlight_group], ax=ax_clu3)
     else:
@@ -208,11 +239,42 @@ def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:st
             texts3.append(ax_clu3.text(x_, y_, l_,  va='center',ha='center', fontsize=12, style='italic'))
         adjust_text(texts3, ax=ax_clu3, arrowprops=dict(arrowstyle="-", color='k', lw=1.1, alpha=.95), expand=(2, 2))
 
-        if (savefig!=None) and isinstance(savefig, dict):
-            fig.savefig(**savefig)
+    if (savefig!=None) and isinstance(savefig, dict):
+        fig.savefig(**savefig)
     return None
 
-def plot_corr(adata, layer:str = None, r_pearson_lim:float = 0.5, p_value_lim:float = 0.05, correct_fdr:bool = True, figsize:tuple = (8.35*2/3, 8.35*2/3), bbox_to_anchor:tuple=(1.2, 1), color_threshold:float=0, savefig:dict=None):
+def plot_corr(adata, layer:str = None, r_pearson_lim:float = 0.5, p_value_lim:float = 0.05, correct_fdr:bool = True, color_threshold:float=0, bbox_to_anchor:tuple=(1.2, 1), figsize:tuple = (8.35*2/3, 8.35*2/3), savefig:dict=None):
+    """
+    Scatterplot of Pearson correlation, top barplot with quantity of genes correlated and right dendrogram clustering genes by distance correlation.
+
+    Parameters
+    ----------
+    adata : Anndata
+    layer : string, optional
+        layer of AnnData object to be used to transform.
+        If layer is not informed, adata.X will be used.
+    r_pearson_lim : float
+        Limite to highlight the R correlation value.
+    p_value_lim : float
+        Limit of p-value to consider the test statistically significant.
+    correct_fdr : bool
+        It True a False Discovery rate is calculated based on Benjamini-Hochberg method.
+    color_threshold: float
+        Limit of cophenetic distance to color the groups on dendrogram.
+    pallete: string, optional
+        Name of the matplotlib colormap.
+    bbox_to_anchor: tuple
+        Tuple with positions to the set the legend.
+    figsize: tuple
+        Tuple with the width and height of the figure.
+    savefig: dict, optional
+        Dictionary with arguments for matplotlib.pyplot.savefig. Example: {'fname':'./test.pdf', 'format':'pdf', 'dpi':300}
+
+    Returns
+    -------
+    None
+
+    """
     fig = plt.figure(figsize=figsize)
     gs = GridSpec(2, 2, width_ratios=[8, 1], height_ratios=[1,8], wspace=.02, hspace=.02)
     ax = fig.add_subplot(gs[1,0])
@@ -346,53 +408,3 @@ def plot_corr(adata, layer:str = None, r_pearson_lim:float = 0.5, p_value_lim:fl
     # plt.gca().set_axisbelow(True)
 
     return None
-
-
-# import warnings
-#
-# import pandas as pd
-# import numpy as np
-# import anndata as ad
-#
-# import matplotlib.pyplot as plt
-# from matplotlib.gridspec import GridSpec
-# from matplotlib import cm
-# import seaborn as sns
-#
-# def plot_stb_cv(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', hue:str = 'pool_mean', palette:str = None, legend:bool = False, figsize:tuple = (10,5), median_line:bool = True):
-#     fig = plt.figure(figsize=figsize)
-#     gs = GridSpec(3, 3, width_ratios=[8, 1, 9], height_ratios=[1, 5, 5], wspace=.02, hspace=.02)
-#
-#     ax_clu = fig.add_subplot(gs[1,0])
-#     ax_hist_cv = fig.add_subplot(gs[1,1])
-#     ax_hist_mean = fig.add_subplot(gs[0,0])
-#
-#     if hue == None:
-#         palette = None
-#     sns.scatterplot(x=x, y=y, hue=hue, palette=palette, data=adata.var, ax=ax_clu)
-#     ax_clu.get_legend().set_visible(legend)
-#     ax_clu.spines[['right', 'top']].set_visible(False)
-#
-#     sns.histplot(x=x, ec='white', data=adata.var, kde=True, ax=ax_hist_mean)
-#     ax_hist_mean.spines[['left','right', 'top']].set_visible(False)
-#     ax_hist_mean.set_xlabel(None)
-#     ax_hist_mean.set_ylabel(None)
-#     ax_hist_mean.set_xticklabels([])
-#     ax_hist_mean.set_yticklabels([])
-#     ax_hist_mean.tick_params(left = False)
-#     ax_hist_mean.grid(False)
-#
-#     sns.histplot(y=y, ec='white', data=adata.var, kde=True, ax=ax_hist_cv)
-#     ax_hist_cv.spines[['right', 'top','bottom']].set_visible(False)
-#     ax_hist_cv.set_ylabel(None)
-#     ax_hist_cv.set_xlabel(None)
-#     ax_hist_cv.set_yticklabels([])
-#     ax_hist_cv.set_xticklabels([])
-#     ax_hist_cv.tick_params(bottom = False)
-#     ax_hist_cv.grid(False)
-#
-#     if median_line:
-#         ax_clu.axvline(np.median(adata.var[x]), ls='--', lw=1,color='black')
-#         ax_clu.axhline(np.median(adata.var[y]), ls='--', lw=1, color='black')
-#
-#     return None

@@ -568,6 +568,33 @@ def hkg_selection_ga(adata, layer:str = None, outlier_threshold:float = .9, fitn
 
 
 def boruta_selection(adata, layer:str = None, class_col:str = None, scaler = None, rf_model = None, class_weight:list = None, random_state:int = 42, alpha:float=.05):
+    """
+    Call boruta function from BorutaPy package for feature seleciton. This function balance the classes via class_weight.
+
+    Parameters
+    ----------
+    adata : Anndata
+    layer : string, optional
+        layer of AnnData object to be used to transform.
+        If layer is not informed, adata.X will be used.
+    class_col: str
+        It is the column on adata.obs where the classes for comparasion are described.
+    scaler_object: scikit-learning preprocessing scaler_object
+        It is optional to fit and transform the data before clustering. If None, no transformation is applied.
+    rf_model: scikit-learning RandomForestClassifier object.
+        It is optional to calcluate closest neighbors. If None, a default sklearn.ensemble.RandomForestClassifier is applied.
+    class_weight: list
+        Weight for each class. If None, we use sklearn.utils.class_weight.compute_class_weight function to calcluate a balanced weight.
+    random_state: int
+        It is a seed number to guarantee reproducibility.
+    alpha: float
+        It is the alpha for p-value cutoff during the boruta decision.
+
+    Returns
+    -------
+    dict
+        Return a dictionary with genes, their ranks and support. {'genes':[], 'rank':[], 'support':[]}
+    """
     if layer != None:
         X_ = adata.layers[layer]
     else:
@@ -605,6 +632,39 @@ def boruta_selection(adata, layer:str = None, class_col:str = None, scaler = Non
     return result
 
 def set_boruta_selection(adata, layer:str = None, class_col:str = None, scaler = None,  rf_model = None, random_state:int = 42, class_weight:list = None, n_set:int = 5, sample_size:int = None, replace:bool = False, alpha:float=.05):
+    """
+    Call boruta function from BorutaPy package for feature seleciton n_set times in different subsamples.
+
+    Parameters
+    ----------
+    adata : Anndata
+    layer : string, optional
+        layer of AnnData object to be used to transform.
+        If layer is not informed, adata.X will be used.
+    class_col: str
+        It is the column on adata.obs where the classes for comparasion are described.
+    scaler_object: scikit-learning preprocessing scaler_object
+        It is optional to fit and transform the data before clustering. If None, no transformation is applied.
+    rf_model: scikit-learning RandomForestClassifier object.
+        It is optional to calcluate closest neighbors. If None, a default sklearn.ensemble.RandomForestClassifier is applied.
+    class_weight: list
+        Weight for each class. If None, we use sklearn.utils.class_weight.compute_class_weight function to calcluate a balanced weight.
+    random_state: int
+        It is a seed number to guarantee reproducibility.
+    n_set: int
+        Number boruta algorithm runs in different subsamples.
+    sample_size: int
+        Minimun number os samples in each class.
+    replace: bool
+        Argument of np.random.choice. If False the resample is with unique values, otherwise the same sample can be in the subsample.
+    alpha: float
+        It is the alpha for p-value cutoff during the boruta decision.
+
+    Returns
+    -------
+    list
+        Return a list with dictionaries from boruta_selection function, [{'genes':[], 'rank':[], 'support':[]},...]
+    """
     if class_col == None:
         raise Exception("Boruta feature selection requires a class_col argument, with, at least, two different classes.")
     else:
@@ -617,6 +677,25 @@ def set_boruta_selection(adata, layer:str = None, class_col:str = None, scaler =
     return results
 
 def balance_resample(y_var:list = None, random_state:int = 42, sample_size:int = None, replace:bool = False):
+    """
+    Create balanced subsamples based in the minimum size of a class.
+
+    Parameters
+    ----------
+    y_var : list
+        List or numpy.array of classes.
+    random_state: int
+        It is a seed number to guarantee reproducibility.
+    sample_size: int
+        Minimun number os samples in each class.
+    replace: bool
+        Argument of np.random.choice. If False the resample is with unique values, otherwise the same sample can be in the subsample.
+
+    Returns
+    -------
+    list
+        Return a list of indices of a balanced subsample.
+    """
     v, c = np.unique(y_var, return_counts=True)
     if sample_size == None:
         sample_size = c.min()
@@ -633,72 +712,29 @@ def balance_resample(y_var:list = None, random_state:int = 42, sample_size:int =
     return idx
 
 def set_balance_resample(y_var:list = None, n_set:int = 5, random_state:int = 42, sample_size:int = None, replace:bool = False):
+    """
+    Create a list of n_set balanced subsamples.
+
+    Parameters
+    ----------
+    y_var : list
+        List or numpy.array of classes.
+    n_set: int
+        Number boruta algorithm runs in different subsamples.
+    random_state: int
+        It is a seed number to guarantee reproducibility.
+    sample_size: int
+        Minimun number os samples in each class.
+    replace: bool
+        Argument of np.random.choice. If False the resample is with unique values, otherwise the same sample can be in the subsample.
+
+    Returns
+    -------
+    list
+        Return a list n_set indices of balanced subsamples
+    """
     set_idx = []
     for n in range(n_set):
         set_idx.append( balance_resample(y_var, random_state+n, sample_size, replace) )
 
     return set_idx
-# def fitness_func(ga_instance, solution, solution_idx):
-#     lb = LabelBinarizer()
-#     # X = df_cnt.iloc[:,:-1].values[:,np.where(solution)[0]]
-#     # y = lb.fit_transform(df_cnt.ar.values).flatten()
-#     X_train, X_test, y_train, y_test = train_test_split(X_o[:,np.where(solution)[0]], y_o, test_size=0.33, random_state=42)
-#
-#     neigh = KNeighborsClassifier(n_neighbors=2)
-#     neigh.fit(X_train, y_train)
-#     y_pred = neigh.predict(X_test)
-#     # fitness = 1 / ( f1_score(y_test, y_pred) * np.mean(np.var(X_o[:,np.where(solution)[0]], axis=0))) # * solution.sum()
-#     fitness = 1 / ( f1_score(y_test, y_pred) * gmean(np.var(X_o[:,np.where(solution)[0]], axis=0)) )# * solution.sum()
-#     # fitness = inliers
-#     return fitness
-#
-# fitness_function = fitness_func
-#
-# num_generations = 100
-# num_parents_mating = 2
-#
-# sol_per_pop = 8
-# if intial:
-#     num_genes = len(bm)
-# else:
-#     num_genes = 1176
-#
-# init_range_low = 0
-# init_range_high = 2
-#
-# parent_selection_type = "sss"
-# keep_parents = 1
-#
-# crossover_type = "single_point"
-#
-# mutation_type = "random"
-# mutation_percent_genes = 10
-#
-# gene_type=int
-#
-# ga_instance = pygad.GA(num_generations=num_generations,
-#                        num_parents_mating=num_parents_mating,
-#                        fitness_func=fitness_function,
-#                        sol_per_pop=sol_per_pop,
-#                        num_genes=num_genes,
-#                        # init_range_low=init_range_low,
-#                        # init_range_high=init_range_high,
-#                        parent_selection_type=parent_selection_type,
-#                        keep_parents=keep_parents,
-#                        crossover_type=crossover_type,
-#                        mutation_type=mutation_type,
-#                        mutation_percent_genes=mutation_percent_genes,
-#                        gene_type=gene_type,
-#                        gene_space=[0, 1]
-#                       )
-#
-# ga_instance.run()
-# # print(ga_instance.initial_population[0])
-# # print(ga_instance.population)
-#
-# solution, solution_fitness, solution_idx = ga_instance.best_solution()
-# print("Parameters of the best solution : {solution}".format(solution=solution))
-# print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
-# print(np.where( solution )[0].shape)
-# prediction = numpy.sum(numpy.array(function_inputs)*solution)
-# print("Predicted output based on the best solution : {prediction}".format(prediction=prediction))
