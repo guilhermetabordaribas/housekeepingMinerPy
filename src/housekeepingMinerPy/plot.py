@@ -13,7 +13,7 @@ from adjustText import adjust_text
 from scipy.stats import pearsonr, false_discovery_control
 import scipy.cluster.hierarchy as sch
 
-def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='pool_mean', hue:str = 'uclustering_cv_stb_labels', palette:str = None, legend:bool = False, median_line:bool = True, ann_genes:list = None, highlight_group:str=None, figsize:tuple = (8.35*2,8.35), savefig:dict=None):
+def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:str='gini_coefficient', hue:str = 'uclustering_cv_stb_labels', palette:str = None, legend:bool = False, median_line:bool = True, ann_genes:list = None, highlight_group:str=None, figsize:tuple = (8.35*2,8.35), savefig:dict=None):
     """
     Plot six main plots combining three variables, for example: coefficient of variance, Gini coefficient and CV of stability. For each line of plot there are a scatterplot and a boxplot. The scatterplot is design with two variable and in each axis a histogram show the distribution of each variable. the second plot is a boxplot with the vatriable from the scatterplot vertical axis splitted in groups. A barplot is in the top of boxplot showing the number of genes is in each group.
 
@@ -83,6 +83,7 @@ def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:st
         cmap = plt.get_cmap(palette, len(hue_order))
         cmap = [colors.to_hex(cmap(i)) for i in range(len(hue_order))]
         cmap = dict(zip(hue_order,cmap))
+        # print(cmap)
 
     # TOP grid
     if isinstance(highlight_group, int):
@@ -119,12 +120,13 @@ def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:st
     ax_y_bar.set_ylabel('Qty.')
 
     sns.stripplot(x=hue, y=y, order=order, color='black', s=1, data=adata.var, ax=ax_y_violin)
-    sns.boxplot(x=hue, y=y, order=order, palette=cmap, data=adata.var, ax=ax_y_violin)
+    sns.boxplot(x=hue, y=y, hue=hue, order=order, palette=cmap, data=adata.var, ax=ax_y_violin)
     ax_y_violin.set_ylabel(None)
     ax_y_violin.set_yticklabels([])
     aux_md = adata.var.groupby(hue).quantile(0.75, numeric_only=True)
     arg_max = len(aux_md.loc[aux_md[y]<=adata.var[y].median(numeric_only=True)][y]) - .5
     ax_y_violin.axvline(arg_max, ls=':', lw=1,color='gray')
+    ax_y_violin.get_legend().set_visible(legend)
 
     # Middle grid
     if isinstance(highlight_group, int):
@@ -161,12 +163,13 @@ def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:st
     ax_y_bar2.set_ylabel('Qty.')
 
     sns.stripplot(x=hue, y=z, order=order, color='black', s=1, data=adata.var, ax=ax_y_violin2)
-    sns.boxplot(x=hue, y=z, order=order, palette=cmap, data=adata.var, ax=ax_y_violin2)
+    sns.boxplot(x=hue, y=z, hue=hue, order=order, palette=cmap, data=adata.var, ax=ax_y_violin2)
     ax_y_violin2.set_ylabel(None)
     ax_y_violin2.set_yticklabels([])
     aux_md = adata.var.groupby(hue).quantile(0.75, numeric_only=True)
     arg_max = len(aux_md.loc[aux_md[z]<=adata.var[z].median(numeric_only=True)][z]) - .5
     ax_y_violin2.axvline(arg_max, ls=':', lw=1,color='gray')
+    ax_y_violin2.get_legend().set_visible(legend)
 
     # Bottom grid
     if isinstance(highlight_group, str):
@@ -203,12 +206,13 @@ def plot_stb_cv_gini(adata, x:str = 'pool_cv', y:str = 'pool_stability_cv', z:st
     ax_y_bar3.set_ylabel('Qty.')
 
     sns.stripplot(x=hue, y=x, order=order, color='black', s=1, data=adata.var, ax=ax_y_violin3)
-    sns.boxplot(x=hue, y=x, order=order, palette=cmap, data=adata.var, ax=ax_y_violin3)
+    sns.boxplot(x=hue, y=x, hue=hue, order=order, palette=cmap, data=adata.var, ax=ax_y_violin3)
     ax_y_violin3.set_ylabel(None)
     ax_y_violin3.set_yticklabels([])
     aux_md = adata.var.groupby(hue).quantile(0.75, numeric_only=True)
     arg_max = len(aux_md.loc[aux_md[x]<=adata.var[x].median(numeric_only=True)][x]) - .5
     ax_y_violin3.axvline(arg_max, ls=':', lw=1,color='gray')
+    ax_y_violin3.get_legend().set_visible(legend)
 
     if median_line:
         ax_clu.axvline(np.median(adata.var[x]), ls='--', lw=1,color='black')
